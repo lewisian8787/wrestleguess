@@ -1,16 +1,40 @@
-# React + Vite
+# WrestleGuess
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+WrestleGuess is a fantasy pick'em game for wrestling pay-per-view events (WWE, AEW). Users can predict match outcomes, join mini-leagues with friends, and compare their scores nationally.
 
-Currently, two official plugins are available:
+## Features
+- Predict the outcomes of wrestling matches.
+- Create or join mini-leagues to compete with friends.
+- National leaderboard to compare scores across all users.
+- Built with React, Firebase, and Vite.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
+- **Frontend:** React, styled with CSS
+- **Backend/Database:** Firebase (Firestore for real-time data)
+- **Build Tools:** Vite for fast development and bundling
 
-## React Compiler
+## Installation
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### How to Run Locally
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your_username/WrestleGuess.git
+   ```
+2. Navigate into the project folder:
+   ```bash
+   cd WrestleGuess
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-## Expanding the ESLint configuration
+## Contributing
+Feel free to fork this repository and submit pull requests. Contributions are welcome!
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## License
+This project is licensed under the MIT License.
