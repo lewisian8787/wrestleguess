@@ -7,6 +7,7 @@ import StandingsPage from "./StandingsPage.jsx";
 import AdminLogin from "./AdminLogin.jsx";
 import AdminEventPanel from "./AdminEventPanel.jsx";
 import NotFound from "./NotFound.jsx";
+import colors from './theme'
 
 export default function App() {
   return (
