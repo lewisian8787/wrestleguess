@@ -307,7 +307,7 @@ export default function LandingPage() {
 
           {/* CTA Button */}
           <a
-            href="/home"
+            href="/login"
             style={{
               display: "inline-block",
               textDecoration: "none",
