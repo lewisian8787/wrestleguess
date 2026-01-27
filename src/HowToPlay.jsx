@@ -338,7 +338,6 @@ const stepCardStyle = {
 };
 
 const stepNumberStyle = {
-  display: "inline-block",
   width: "50px",
   height: "50px",
   borderRadius: "50%",

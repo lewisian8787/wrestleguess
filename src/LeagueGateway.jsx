@@ -21,36 +21,44 @@ export default function LeagueGateway() {
   const [createName, setCreateName] = useState("");
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(true);
 
   // On mount, load user data and leagues
   useEffect(() => {
     (async () => {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
 
-      setUser(currentUser);
+        setUser(currentUser);
 
-      // load /users/{uid}
-      const userRef = doc(db, "users", currentUser.uid);
-      const userSnap = await getDoc(userRef);
+        // load /users/{uid}
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
 
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        setUserDisplayName(data.displayName || "User");
-        const leagueIds = data.leagues || [];
-        // fetch league docs
-        const leaguesData = [];
-        for (const leagueId of leagueIds) {
-          const leagueRef = doc(db, "leagues", leagueId);
-          const leagueSnap = await getDoc(leagueRef);
-          if (leagueSnap.exists()) {
-            leaguesData.push({
-              id: leagueId,
-              ...leagueSnap.data(),
-            });
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setUserDisplayName(data.displayName || "User");
+          const leagueIds = data.leagues || [];
+          // fetch league docs
+          const leaguesData = [];
+          for (const leagueId of leagueIds) {
+            const leagueRef = doc(db, "leagues", leagueId);
+            const leagueSnap = await getDoc(leagueRef);
+            if (leagueSnap.exists()) {
+              leaguesData.push({
+                id: leagueId,
+                ...leagueSnap.data(),
+              });
+            }
           }
+          setUserLeagues(leaguesData);
         }
-        setUserLeagues(leaguesData);
+      } catch (error) {
+        console.error("Error loading leagues:", error);
+        setStatus("Error loading leagues. Please refresh the page.");
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
@@ -163,6 +171,22 @@ export default function LeagueGateway() {
     ]);
 
     setJoinCodeInput("");
+  }
+
+  if (loading) {
+    return (
+      <>
+        <NavBar />
+        <div style={pageStyle}>
+          <div style={containerStyle}>
+            <div style={loadingContainerStyle}>
+              <div style={spinnerStyle}></div>
+              <p style={loadingTextStyle}>Loading your leagues...</p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -533,4 +557,29 @@ const eventsButtonStyle = {
   transition: "all 0.3s ease",
   boxShadow: `0 4px 12px ${colors.primary}40`,
   cursor: "pointer",
+};
+
+const loadingContainerStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: "400px",
+  gap: "1.5rem",
+};
+
+const spinnerStyle = {
+  width: "50px",
+  height: "50px",
+  border: `4px solid ${colors.borderColor}`,
+  borderTop: `4px solid ${colors.primary}`,
+  borderRadius: "50%",
+  animation: "spin 1s linear infinite",
+};
+
+const loadingTextStyle = {
+  fontFamily: '"Bebas Neue", "Impact", sans-serif',
+  fontSize: "1.5rem",
+  color: colors.textColor,
+  letterSpacing: "0.05em",
 };

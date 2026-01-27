@@ -30,7 +30,7 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/wrestleguess
       - JWT_SECRET=your-secret-key-change-this-in-production
       - JWT_EXPIRE=7d
-      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost,http://localhost:80
     depends_on:
       - mongodb
     networks:
@@ -38,6 +38,20 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+
+  # Frontend (React + nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wrestleguess-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - wrestleguess-network
 
 volumes:
   mongodb_data:
