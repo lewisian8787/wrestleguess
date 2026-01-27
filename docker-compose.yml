@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: wrestleguess-db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: wrestleguess
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - wrestleguess-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wrestleguess-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/wrestleguess
+      - JWT_SECRET=your-secret-key-change-this-in-production
+      - JWT_EXPIRE=7d
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+    depends_on:
+      - mongodb
+    networks:
+      - wrestleguess-network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  wrestleguess-network:
+    driver: bridge

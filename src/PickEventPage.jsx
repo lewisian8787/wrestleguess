@@ -11,6 +11,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import NavBar from "./NavBar";
+import colors from "./theme";
 
 export default function PickEventPage() {
   const { eventId } = useParams();
@@ -21,7 +22,6 @@ export default function PickEventPage() {
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
-  const [lastSaved, setLastSaved] = useState(null);
   const [isLegacyPick, setIsLegacyPick] = useState(false);
 
   // Load event, matches, and existing picks
@@ -170,7 +170,7 @@ export default function PickEventPage() {
         submittedAt: serverTimestamp(),
       });
 
-      setStatus("Picks saved ✔");
+      setStatus("Picks saved successfully! ✓");
     } catch (e) {
       console.error(e);
       setStatus(`Error saving picks: ${e.message || e}`);
@@ -183,10 +183,11 @@ export default function PickEventPage() {
     return (
       <>
         <NavBar />
-        <ScreenWrapper>
-          <Header title="Loading…" />
-          <StatusBox text="Fetching event…" />
-        </ScreenWrapper>
+        <div style={pageStyle}>
+          <div style={containerStyle}>
+            <div style={loadingStyle}>Loading event...</div>
+          </div>
+        </div>
       </>
     );
   }
@@ -195,10 +196,12 @@ export default function PickEventPage() {
     return (
       <>
         <NavBar />
-        <ScreenWrapper>
-          <Header title="Make Your Picks" />
-          <StatusBox text={status || "Event not found."} />
-        </ScreenWrapper>
+        <div style={pageStyle}>
+          <div style={containerStyle}>
+            <h1 style={titleStyle}>Make Your Picks</h1>
+            <div style={errorStyle}>{status || "Event not found."}</div>
+          </div>
+        </div>
       </>
     );
   }
@@ -206,327 +209,486 @@ export default function PickEventPage() {
   return (
     <>
       <NavBar />
-      <ScreenWrapper>
-        <Header title={eventData.name || "Make Your Picks"} />
+      <div style={pageStyle}>
+        <div style={containerStyle}>
+          <h1 style={titleStyle}>{eventData.name || "Make Your Picks"}</h1>
+          <p style={subtitleStyle}>
+            {eventData.brand || "Wrestling"} • {isNaN(eventDate) ? "Date TBD" : eventDate.toLocaleDateString()}
+          </p>
 
-      {status && <StatusBox text={status} />}
-      {locked && <StatusBox text="This event is locked. Picks are closed." />}
-      {isLegacyPick && (
-        <StatusBox text="These are old-format picks. To update them with confidence points, please make new picks." />
-      )}
+          {/* Status Messages */}
+          {status && (
+            <div style={statusStyle}>
+              {status}
+            </div>
+          )}
 
-      {!locked && !isLegacyPick && (
-        <div style={budgetTrackerStyle}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-            <span style={{ fontWeight: 600 }}>Confidence Budget:</span>
-            <span style={{
-              fontWeight: 600,
-              color: remainingConfidence === 0 ? "#4ade80" : (remainingConfidence < 0 ? "#f87171" : "#ffd600")
-            }}>
-              {remainingConfidence} / 100 remaining
-            </span>
-          </div>
-          <div style={progressBarStyle}>
-            <div style={{
-              ...progressFillStyle,
-              width: `${Math.min(100, totalConfidence)}%`,
-              background: totalConfidence === 100 ? "#4ade80" : (totalConfidence > 100 ? "#f87171" : "#ffd600")
-            }} />
-          </div>
-          <div style={{ fontSize: "0.7rem", opacity: 0.7, marginTop: "0.5rem", textAlign: "center" }}>
-            Allocate exactly 100 points across all matches
-          </div>
-        </div>
-      )}
+          {locked && (
+            <div style={warningStyle}>
+              🔒 This event is locked. Picks are closed.
+            </div>
+          )}
 
-      <section style={cardSectionStyle}>
-        <div style={cardSectionHeaderStyle}>
-          <div style={{ fontWeight: 600, fontSize: "1rem" }}>
-            {(eventData.brand || "Event")} —{" "}
-            {isNaN(eventDate) ? "Date TBD" : eventDate.toLocaleString()}
-          </div>
-          <div style={{ fontSize: "0.75rem", opacity: 0.7, lineHeight: 1.4 }}>
-            Choose who you think will win each match.
-          </div>
-        </div>
+          {isLegacyPick && (
+            <div style={infoStyle}>
+              These are old-format picks. To update them with confidence points, please make new picks.
+            </div>
+          )}
 
-        {Array.isArray(eventData.matches) && eventData.matches.length > 0 ? (
-          eventData.matches.map((m, idx) => {
-            const currentChoice = choices[m.matchId] || null;
-            const currentWinner = currentChoice?.winner || null;
-            const currentConfidence = currentChoice?.confidence || 0;
-            const competitors = Array.isArray(m.competitors) ? m.competitors : [];
-            const multiplier = m.multiplier || 1.0;
+          {/* Budget Tracker */}
+          {!locked && !isLegacyPick && (
+            <div style={budgetTrackerStyle}>
+              <div style={budgetHeaderStyle}>
+                <span style={budgetLabelStyle}>Confidence Budget:</span>
+                <span style={{
+                  ...budgetValueStyle,
+                  color: remainingConfidence === 0 ? "#22c55e" : (remainingConfidence < 0 ? "#ef4444" : colors.primary)
+                }}>
+                  {remainingConfidence} / 100 remaining
+                </span>
+              </div>
+              <div style={progressBarContainerStyle}>
+                <div style={{
+                  ...progressBarFillStyle,
+                  width: `${Math.min(100, totalConfidence)}%`,
+                  background: totalConfidence === 100 ? "#22c55e" : (totalConfidence > 100 ? "#ef4444" : colors.primary)
+                }} />
+              </div>
+              <div style={budgetHintStyle}>
+                Allocate exactly 100 points across all matches
+              </div>
+            </div>
+          )}
 
-            return (
-              <div key={m.matchId || `m-${idx}`} style={matchCardStyle}>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    opacity: 0.7,
-                    marginBottom: "0.5rem",
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {m.type || "Match"}
-                  {m.titleMatch ? " • Title Match" : ""}
-                  {multiplier !== 1.0 && ` • ${multiplier}x multiplier`}
-                </div>
-                <div style={{ display: "grid", gap: "0.5rem" }}>
-                  {competitors.map((name) => (
-                    <button
-                      key={name}
-                      onClick={() => {
-                        if (!locked && !isLegacyPick) setPick(m.matchId, name);
-                      }}
-                      style={{
-                        ...pickButtonStyle,
-                        ...(currentWinner === name ? pickButtonSelectedStyle : {}),
-                        ...(locked || isLegacyPick ? pickButtonLockedStyle : {}),
-                      }}
-                    >
-                      <div style={{ fontWeight: 600 }}>{name}</div>
-                      {currentWinner === name && (
-                        <div
-                          style={{
-                            fontSize: "0.7rem",
-                            fontWeight: 500,
-                            opacity: 0.8,
-                          }}
-                        >
-                          ✔ your pick
+          {/* Matches */}
+          <div style={matchesContainerStyle}>
+            {Array.isArray(eventData.matches) && eventData.matches.length > 0 ? (
+              eventData.matches.map((m, idx) => {
+                const currentChoice = choices[m.matchId] || null;
+                const currentWinner = currentChoice?.winner || null;
+                const currentConfidence = currentChoice?.confidence || 0;
+                const competitors = Array.isArray(m.competitors) ? m.competitors : [];
+                const multiplier = m.multiplier || 1.0;
+
+                return (
+                  <div key={m.matchId || `m-${idx}`} style={matchCardStyle}>
+                    {/* Match Header */}
+                    <div style={matchHeaderStyle}>
+                      <div style={matchTypeStyle}>
+                        {m.type || "Match"}
+                        {m.titleMatch && " • Title Match"}
+                      </div>
+                      {multiplier !== 1.0 && (
+                        <div style={multiplierBadgeStyle}>
+                          {multiplier}x
                         </div>
                       )}
-                    </button>
-                  ))}
-                </div>
+                    </div>
 
-                {/* Confidence allocation - only show if winner selected and not locked/legacy */}
-                {currentWinner && !locked && !isLegacyPick && (
-                  <div style={confidenceInputContainerStyle}>
-                    <div style={{ fontSize: "0.8rem", fontWeight: 500, marginBottom: "0.5rem" }}>
-                      Confidence Points:
+                    {/* Competitor Buttons */}
+                    <div style={competitorsGridStyle}>
+                      {competitors.map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => {
+                            if (!locked && !isLegacyPick) setPick(m.matchId, name);
+                          }}
+                          style={{
+                            ...pickButtonStyle,
+                            ...(currentWinner === name ? pickButtonSelectedStyle : {}),
+                            ...(locked || isLegacyPick ? pickButtonLockedStyle : {}),
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!locked && !isLegacyPick && currentWinner !== name) {
+                              e.target.style.borderColor = colors.primary;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (currentWinner !== name) {
+                              e.target.style.borderColor = colors.borderColor;
+                            }
+                          }}
+                        >
+                          <div style={competitorNameStyle}>{name}</div>
+                          {currentWinner === name && (
+                            <div style={selectedIndicatorStyle}>
+                              ✓ Your Pick
+                            </div>
+                          )}
+                        </button>
+                      ))}
                     </div>
-                    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                      <input
-                        type="range"
-                        min="0"
-                        max={Math.min(100, remainingConfidence + currentConfidence)}
-                        value={currentConfidence}
-                        onChange={(e) => setConfidence(m.matchId, e.target.value)}
-                        style={rangeInputStyle}
-                      />
-                      <input
-                        type="number"
-                        min="0"
-                        max={Math.min(100, remainingConfidence + currentConfidence)}
-                        value={currentConfidence}
-                        onChange={(e) => setConfidence(m.matchId, e.target.value)}
-                        style={numberInputStyle}
-                      />
-                    </div>
-                    {currentConfidence > 0 && multiplier !== 1.0 && (
-                      <div style={{ fontSize: "0.7rem", opacity: 0.6, marginTop: "0.25rem" }}>
-                        Potential points: {currentConfidence} × {multiplier} = {(currentConfidence * multiplier).toFixed(1)}
+
+                    {/* Confidence allocation - only show if winner selected and not locked/legacy */}
+                    {currentWinner && !locked && !isLegacyPick && (
+                      <div style={confidenceContainerStyle}>
+                        <div style={confidenceLabelStyle}>
+                          Confidence Points:
+                        </div>
+                        <div style={confidenceInputsStyle}>
+                          <input
+                            type="range"
+                            min="0"
+                            max={Math.min(100, remainingConfidence + currentConfidence)}
+                            value={currentConfidence}
+                            onChange={(e) => setConfidence(m.matchId, e.target.value)}
+                            style={rangeInputStyle}
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            max={Math.min(100, remainingConfidence + currentConfidence)}
+                            value={currentConfidence}
+                            onChange={(e) => setConfidence(m.matchId, e.target.value)}
+                            style={numberInputStyle}
+                          />
+                        </div>
+                        {currentConfidence > 0 && multiplier !== 1.0 && (
+                          <div style={potentialPointsStyle}>
+                            Potential points: {currentConfidence} × {multiplier} = <strong>{(currentConfidence * multiplier).toFixed(1)}</strong>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
+                );
+              })
+            ) : (
+              <div style={noMatchesStyle}>
+                No matches found for this event.
               </div>
-            );
-          })
-        ) : (
-          <div style={{ opacity: 0.8, fontSize: "0.85rem" }}>
-            No matches found for this event.
+            )}
           </div>
-        )}
-      </section>
 
-      {!locked && (
-        <button
-          style={{
-            ...saveButtonStyle,
-            opacity: saving ? 0.7 : 1,
-            cursor: saving ? "wait" : "pointer",
-          }}
-          onClick={handleSavePicks}
-          disabled={saving}
-        >
-          {saving ? "Saving…" : "Save My Picks"}
-        </button>
-      )}
-
-      <Footer />
-    </ScreenWrapper>
+          {/* Save Button */}
+          {!locked && !isLegacyPick && (
+            <button
+              style={{
+                ...saveButtonStyle,
+                opacity: saving ? 0.7 : 1,
+                cursor: saving ? "wait" : "pointer",
+              }}
+              onMouseEnter={(e) => {
+                if (!saving) {
+                  e.target.style.transform = "translateY(-2px)";
+                  e.target.style.boxShadow = `0 8px 20px ${colors.primary}60`;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = `0 4px 12px ${colors.primary}40`;
+              }}
+              onClick={handleSavePicks}
+              disabled={saving}
+            >
+              {saving ? "Saving…" : "Save My Picks"}
+            </button>
+          )}
+        </div>
+      </div>
     </>
   );
 }
 
-/* ----- presentational helpers (unchanged) ----- */
-function ScreenWrapper({ children }) {
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#0b0b10",
-        color: "white",
-        fontFamily:
-          "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-        padding: "1.5rem",
-        maxWidth: "480px",
-        margin: "0 auto",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-function Header({ title }) {
-  return (
-    <h1
-      style={{
-        fontSize: "1.1rem",
-        fontWeight: 600,
-        marginBottom: "1rem",
-        textAlign: "center",
-      }}
-    >
-      {title}
-    </h1>
-  );
-}
-function StatusBox({ text }) {
-  if (!text) return null;
-  return (
-    <div
-      style={{
-        background: "#1f1f29",
-        border: "1px solid #3a3a55",
-        borderRadius: "0.75rem",
-        padding: "0.75rem",
-        fontSize: "0.8rem",
-        marginBottom: "1rem",
-        textAlign: "center",
-        lineHeight: 1.4,
-      }}
-    >
-      {text}
-    </div>
-  );
-}
-function Footer() {
-  return (
-    <p
-      style={{
-        fontSize: "0.7rem",
-        textAlign: "center",
-        opacity: 0.5,
-        marginTop: "2rem",
-        lineHeight: 1.4,
-      }}
-    >
-      prototype build • not for gambling • bragging rights only
-    </p>
-  );
-}
+/* ---------- STYLES ---------- */
 
-/* ----- styles ----- */
-const cardSectionStyle = {
-  background: "#1a1a22",
-  border: "1px solid #2f2f44",
-  borderRadius: "0.75rem",
-  padding: "1rem",
-  marginBottom: "1.5rem",
+const pageStyle = {
+  minHeight: "calc(100vh - 60px)",
+  background: "#F8F8F8",
+  fontFamily: '"Roboto", sans-serif',
+  padding: "3rem 2rem",
 };
-const cardSectionHeaderStyle = { marginBottom: "1rem", lineHeight: 1.4 };
-const matchCardStyle = {
-  background: "#262636",
-  border: "1px solid #3d3d5c",
-  borderRadius: "0.6rem",
-  padding: "0.75rem",
-  fontSize: "0.9rem",
-  lineHeight: 1.4,
-  color: "#fff",
-  marginBottom: "0.75rem",
-};
-const pickButtonStyle = {
-  appearance: "none",
-  border: "1px solid #3a3a55",
-  borderRadius: "0.6rem",
-  background: "#0f0f16",
-  color: "#fff",
-  textAlign: "left",
-  padding: "0.75rem 0.9rem",
-  fontSize: "0.9rem",
-  lineHeight: 1.4,
-  display: "flex",
-  flexDirection: "column",
-};
-const pickButtonSelectedStyle = {
-  border: "1px solid #ffd600",
-  boxShadow: "0 0 12px rgba(255, 214, 0, 0.4)",
-};
-const pickButtonLockedStyle = { opacity: 0.4, cursor: "not-allowed" };
-const saveButtonStyle = {
-  appearance: "none",
-  border: "0",
+
+const containerStyle = {
+  maxWidth: "800px",
+  margin: "0 auto",
   width: "100%",
-  borderRadius: "0.75rem",
-  padding: "0.9rem 1rem",
-  background:
-    "radial-gradient(circle at 20% 20%, rgba(255,214,0,1) 0%, rgba(255,132,0,1) 60%, rgba(170,60,0,1) 100%)",
-  fontWeight: 600,
+};
+
+const titleStyle = {
+  fontFamily: '"Bebas Neue", "Impact", sans-serif',
+  fontSize: "2.5rem",
+  color: colors.primary,
+  textAlign: "center",
+  margin: "0 0 0.5rem 0",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+
+const subtitleStyle = {
+  fontSize: "1.1rem",
+  color: colors.textColor,
+  textAlign: "center",
+  opacity: 0.7,
+  marginBottom: "2rem",
+};
+
+const loadingStyle = {
+  textAlign: "center",
+  padding: "4rem 2rem",
+  fontSize: "1.1rem",
+  color: colors.textColor,
+  opacity: 0.6,
+};
+
+const errorStyle = {
+  background: "#fee2e2",
+  border: "1px solid #ef4444",
+  borderRadius: "8px",
+  padding: "1rem",
   fontSize: "1rem",
-  color: "#000",
+  color: "#dc2626",
   textAlign: "center",
 };
 
-const budgetTrackerStyle = {
-  background: "#1a1a22",
-  border: "1px solid #2f2f44",
-  borderRadius: "0.75rem",
+const statusStyle = {
+  background: colors.background,
+  border: `2px solid ${colors.primary}`,
+  borderRadius: "8px",
   padding: "1rem",
-  marginBottom: "1rem",
-  fontSize: "0.9rem",
+  fontSize: "0.95rem",
+  marginBottom: "1.5rem",
+  textAlign: "center",
+  color: colors.textColor,
+  fontWeight: 500,
 };
 
-const progressBarStyle = {
+const warningStyle = {
+  background: "#fee2e2",
+  border: "1px solid #ef4444",
+  borderRadius: "8px",
+  padding: "1rem",
+  fontSize: "0.95rem",
+  marginBottom: "1.5rem",
+  textAlign: "center",
+  color: "#dc2626",
+  fontWeight: 500,
+};
+
+const infoStyle = {
+  background: "#dbeafe",
+  border: "1px solid #3b82f6",
+  borderRadius: "8px",
+  padding: "1rem",
+  fontSize: "0.95rem",
+  marginBottom: "1.5rem",
+  textAlign: "center",
+  color: "#1e40af",
+  fontWeight: 500,
+};
+
+const budgetTrackerStyle = {
+  background: colors.background,
+  border: `2px solid ${colors.primary}`,
+  borderRadius: "12px",
+  padding: "1.5rem",
+  marginBottom: "2rem",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+};
+
+const budgetHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "0.75rem",
+};
+
+const budgetLabelStyle = {
+  fontSize: "1rem",
+  fontWeight: 600,
+  color: colors.textColor,
+};
+
+const budgetValueStyle = {
+  fontSize: "1.1rem",
+  fontWeight: 700,
+};
+
+const progressBarContainerStyle = {
   width: "100%",
-  height: "0.5rem",
-  background: "#0f0f16",
-  borderRadius: "0.25rem",
+  height: "1rem",
+  background: "#E5E5E5",
+  borderRadius: "0.5rem",
   overflow: "hidden",
+  marginBottom: "0.75rem",
 };
 
-const progressFillStyle = {
+const progressBarFillStyle = {
   height: "100%",
   transition: "width 0.3s ease, background 0.3s ease",
-  borderRadius: "0.25rem",
+  borderRadius: "0.5rem",
 };
 
-const confidenceInputContainerStyle = {
-  marginTop: "0.75rem",
-  paddingTop: "0.75rem",
-  borderTop: "1px solid #3a3a55",
+const budgetHintStyle = {
+  fontSize: "0.85rem",
+  color: colors.textColor,
+  opacity: 0.7,
+  textAlign: "center",
+  fontStyle: "italic",
+};
+
+const matchesContainerStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "1.5rem",
+  marginBottom: "2rem",
+};
+
+const matchCardStyle = {
+  background: colors.background,
+  border: `1px solid ${colors.borderColor}`,
+  borderRadius: "12px",
+  padding: "1.5rem",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+};
+
+const matchHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "1rem",
+  paddingBottom: "0.75rem",
+  borderBottom: `1px solid ${colors.borderColor}`,
+};
+
+const matchTypeStyle = {
+  fontSize: "0.9rem",
+  fontWeight: 600,
+  color: colors.textColor,
+  opacity: 0.8,
+  textTransform: "uppercase",
+  letterSpacing: "0.03em",
+};
+
+const multiplierBadgeStyle = {
+  background: colors.primary,
+  color: colors.buttonText,
+  fontSize: "0.8rem",
+  fontWeight: 700,
+  padding: "0.35rem 0.75rem",
+  borderRadius: "4px",
+};
+
+const competitorsGridStyle = {
+  display: "grid",
+  gap: "0.75rem",
+  marginBottom: "0.5rem",
+};
+
+const pickButtonStyle = {
+  appearance: "none",
+  border: `2px solid ${colors.borderColor}`,
+  borderRadius: "8px",
+  background: colors.background,
+  color: colors.textColor,
+  textAlign: "left",
+  padding: "1rem 1.25rem",
+  fontSize: "1rem",
+  lineHeight: 1.4,
+  display: "flex",
+  flexDirection: "column",
+  gap: "0.25rem",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+};
+
+const pickButtonSelectedStyle = {
+  border: `2px solid ${colors.primary}`,
+  background: `${colors.primary}10`,
+  boxShadow: `0 0 16px ${colors.primary}40`,
+};
+
+const pickButtonLockedStyle = {
+  opacity: 0.5,
+  cursor: "not-allowed",
+};
+
+const competitorNameStyle = {
+  fontWeight: 600,
+  fontSize: "1.05rem",
+  color: colors.textColor,
+};
+
+const selectedIndicatorStyle = {
+  fontSize: "0.8rem",
+  fontWeight: 600,
+  color: colors.primary,
+};
+
+const confidenceContainerStyle = {
+  marginTop: "1rem",
+  paddingTop: "1rem",
+  borderTop: `1px solid ${colors.borderColor}`,
+};
+
+const confidenceLabelStyle = {
+  fontSize: "0.9rem",
+  fontWeight: 600,
+  color: colors.textColor,
+  marginBottom: "0.75rem",
+};
+
+const confidenceInputsStyle = {
+  display: "flex",
+  gap: "1rem",
+  alignItems: "center",
 };
 
 const rangeInputStyle = {
   flex: 1,
   height: "0.5rem",
   appearance: "none",
-  background: "#3a3a55",
+  background: colors.borderColor,
   borderRadius: "0.25rem",
   outline: "none",
+  cursor: "pointer",
 };
 
 const numberInputStyle = {
-  width: "4rem",
-  background: "#0f0f16",
-  border: "1px solid #3a3a55",
-  borderRadius: "0.4rem",
-  padding: "0.5rem",
-  fontSize: "0.85rem",
-  color: "#fff",
+  width: "5rem",
+  background: colors.background,
+  border: `2px solid ${colors.borderColor}`,
+  borderRadius: "6px",
+  padding: "0.6rem",
+  fontSize: "1rem",
+  color: colors.textColor,
   textAlign: "center",
   outline: "none",
+  fontWeight: 600,
+};
+
+const potentialPointsStyle = {
+  fontSize: "0.85rem",
+  color: colors.textColor,
+  opacity: 0.7,
+  marginTop: "0.5rem",
+};
+
+const noMatchesStyle = {
+  background: colors.background,
+  borderRadius: "12px",
+  border: `1px solid ${colors.borderColor}`,
+  padding: "3rem 2rem",
+  textAlign: "center",
+  color: colors.textColor,
+  opacity: 0.6,
+};
+
+const saveButtonStyle = {
+  appearance: "none",
+  border: "none",
+  width: "100%",
+  borderRadius: "8px",
+  padding: "1.2rem",
+  background: `linear-gradient(135deg, ${colors.buttonGradientStart}, ${colors.buttonGradientEnd})`,
+  fontFamily: '"Bebas Neue", "Impact", sans-serif',
+  fontWeight: 700,
+  fontSize: "1.3rem",
+  color: colors.buttonText,
+  textAlign: "center",
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  cursor: "pointer",
+  transition: "all 0.3s ease",
+  boxShadow: `0 4px 12px ${colors.primary}40`,
 };

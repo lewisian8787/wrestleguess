@@ -3,6 +3,7 @@ import { db, auth } from "./firebase";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import NavBar from "./NavBar";
+import colors from "./theme";
 
 export default function EventsListPage() {
   const [events, setEvents] = useState([]);
@@ -57,9 +58,11 @@ export default function EventsListPage() {
     return (
       <>
         <NavBar />
-        <ScreenWrapper>
-          <Header title="Loading events..." />
-        </ScreenWrapper>
+        <div style={pageStyle}>
+          <div style={containerStyle}>
+            <div style={loadingStyle}>Loading events...</div>
+          </div>
+        </div>
       </>
     );
   }
@@ -67,218 +70,266 @@ export default function EventsListPage() {
   return (
     <>
       <NavBar />
-      <ScreenWrapper>
-        <Header title="Available Events" />
+      <div style={pageStyle}>
+        <div style={containerStyle}>
+          <h1 style={titleStyle}>Available Events</h1>
+          <p style={subtitleStyle}>Make your predictions for upcoming wrestling events</p>
 
-      {events.length === 0 ? (
-        <div style={emptyStateStyle}>
-          No events available yet. Check back soon!
-        </div>
-      ) : (
-        <div style={eventsGridStyle}>
-          {events.map(event => {
-            const eventDate = event.date?.toDate
-              ? event.date.toDate()
-              : new Date(event.date || Date.now());
+          {events.length === 0 ? (
+            <div style={emptyStateStyle}>
+              <p style={emptyTextStyle}>No events available yet.</p>
+              <p style={emptySubTextStyle}>Check back soon for upcoming wrestling events!</p>
+            </div>
+          ) : (
+            <div style={eventsGridStyle}>
+              {events.map(event => {
+                const eventDate = event.date?.toDate
+                  ? event.date.toDate()
+                  : new Date(event.date || Date.now());
 
-            const hasPicked = userPicks[event.id];
-            const isLocked = event.locked;
-            const isScored = event.scored;
+                const hasPicked = userPicks[event.id];
+                const isLocked = event.locked;
+                const isScored = event.scored;
 
-            return (
-              <div key={event.id} style={eventCardStyle}>
-                <div style={eventHeaderStyle}>
-                  <div style={eventBrandStyle}>{event.brand || "Wrestling"}</div>
-                  <div style={eventDateStyle}>
-                    {isNaN(eventDate) ? "Date TBD" : eventDate.toLocaleDateString()}
+                return (
+                  <div key={event.id} style={eventCardStyle}>
+                    <div style={eventHeaderStyle}>
+                      <div style={eventBrandStyle}>{event.brand || "Wrestling"}</div>
+                      <div style={eventDateStyle}>
+                        {isNaN(eventDate) ? "Date TBD" : eventDate.toLocaleDateString()}
+                      </div>
+                    </div>
+
+                    <h3 style={eventNameStyle}>{event.name || "Unnamed Event"}</h3>
+
+                    {event.matches && (
+                      <div style={eventMetaStyle}>
+                        {event.matches.length} {event.matches.length === 1 ? "match" : "matches"}
+                      </div>
+                    )}
+
+                    <div style={eventStatusStyle}>
+                      {isScored && <span style={scoredBadgeStyle}>✓ Scored</span>}
+                      {isLocked && !isScored && <span style={lockedBadgeStyle}>🔒 Locked</span>}
+                      {hasPicked && !isScored && <span style={pickedBadgeStyle}>✓ Picks Submitted</span>}
+                    </div>
+
+                    <button
+                      onClick={() => navigate(`/event/${event.id}/pick`)}
+                      style={{
+                        ...makePicksButtonStyle,
+                        ...(isLocked && !hasPicked ? disabledButtonStyle : {}),
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!(isLocked && !hasPicked)) {
+                          e.target.style.transform = "translateY(-1px)";
+                          e.target.style.boxShadow = `0 6px 16px ${colors.primary}50`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = "translateY(0)";
+                        e.target.style.boxShadow = `0 4px 12px ${colors.primary}40`;
+                      }}
+                      disabled={isLocked && !hasPicked}
+                    >
+                      {hasPicked ? "View/Edit Picks" : "Make Picks"}
+                    </button>
                   </div>
-                </div>
-
-                <h3 style={eventNameStyle}>{event.name || "Unnamed Event"}</h3>
-
-                {event.matches && (
-                  <div style={eventMetaStyle}>
-                    {event.matches.length} matches
-                  </div>
-                )}
-
-                <div style={eventStatusStyle}>
-                  {isScored && <span style={scoredBadgeStyle}>Scored</span>}
-                  {isLocked && !isScored && <span style={lockedBadgeStyle}>Locked</span>}
-                  {hasPicked && !isScored && <span style={pickedBadgeStyle}>Picks Submitted</span>}
-                </div>
-
-                <button
-                  onClick={() => navigate(`/event/${event.id}/pick`)}
-                  style={{
-                    ...makePicksButtonStyle,
-                    ...(isLocked && !hasPicked ? disabledButtonStyle : {}),
-                  }}
-                  disabled={isLocked && !hasPicked}
-                >
-                  {hasPicked ? "View/Edit Picks" : "Make Picks"}
-                </button>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
-
-      <Footer />
-    </ScreenWrapper>
+      </div>
     </>
   );
 }
 
-/* ----- Helper Components ----- */
-function ScreenWrapper({ children }) {
-  return <div style={screenWrapperStyle}>{children}</div>;
-}
+/* ---------- STYLES ---------- */
 
-function Header({ title }) {
-  return <h1 style={headerStyle}>{title}</h1>;
-}
-
-function Footer() {
-  return (
-    <p style={footerStyle}>
-      prototype build • not for gambling • bragging rights only
-    </p>
-  );
-}
-
-/* ----- Styles ----- */
-const screenWrapperStyle = {
-  minHeight: "100vh",
-  backgroundColor: "#0b0b10",
-  color: "white",
-  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-  padding: "1.5rem",
-  maxWidth: "1000px",
-  margin: "0 auto",
+const pageStyle = {
+  minHeight: "calc(100vh - 60px)",
+  background: "#F8F8F8",
+  fontFamily: '"Roboto", sans-serif',
+  padding: "3rem 2rem",
 };
 
-const headerStyle = {
-  fontSize: "1.25rem",
-  fontWeight: 600,
-  marginBottom: "1.5rem",
+const containerStyle = {
+  maxWidth: "1200px",
+  margin: "0 auto",
+  width: "100%",
+};
+
+const titleStyle = {
+  fontFamily: '"Bebas Neue", "Impact", sans-serif',
+  fontSize: "2.5rem",
+  color: colors.primary,
   textAlign: "center",
+  margin: "0 0 0.5rem 0",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+
+const subtitleStyle = {
+  fontSize: "1.1rem",
+  color: colors.textColor,
+  textAlign: "center",
+  opacity: 0.7,
+  marginBottom: "3rem",
+};
+
+const loadingStyle = {
+  textAlign: "center",
+  padding: "4rem 2rem",
+  fontSize: "1.1rem",
+  color: colors.textColor,
+  opacity: 0.6,
 };
 
 const emptyStateStyle = {
-  background: "#1a1a22",
-  border: "1px solid #2f2f44",
-  borderRadius: "0.75rem",
-  padding: "3rem 1rem",
+  background: colors.background,
+  borderRadius: "12px",
+  border: `1px solid ${colors.borderColor}`,
+  padding: "4rem 2rem",
   textAlign: "center",
-  fontSize: "0.9rem",
-  opacity: 0.7,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+};
+
+const emptyTextStyle = {
+  fontSize: "1.2rem",
+  color: colors.textColor,
+  margin: "0 0 0.5rem 0",
+  fontWeight: 500,
+};
+
+const emptySubTextStyle = {
+  fontSize: "1rem",
+  color: colors.textColor,
+  opacity: 0.6,
+  margin: 0,
 };
 
 const eventsGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-  gap: "1rem",
+  gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+  gap: "1.5rem",
   marginBottom: "2rem",
 };
 
 const eventCardStyle = {
-  background: "#1a1a22",
-  border: "1px solid #2f2f44",
-  borderRadius: "0.75rem",
-  padding: "1rem",
+  background: colors.background,
+  border: `1px solid ${colors.borderColor}`,
+  borderRadius: "12px",
+  padding: "1.5rem",
   display: "flex",
   flexDirection: "column",
-  gap: "0.75rem",
+  gap: "1rem",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+  transition: "all 0.2s ease",
 };
 
 const eventHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  fontSize: "0.75rem",
-  opacity: 0.7,
+  fontSize: "0.8rem",
+  paddingBottom: "0.75rem",
+  borderBottom: `1px solid ${colors.borderColor}`,
 };
 
 const eventBrandStyle = {
-  fontWeight: 600,
+  fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
+  color: colors.primary,
 };
 
 const eventDateStyle = {
-  opacity: 0.8,
+  color: colors.textColor,
+  opacity: 0.6,
+  fontWeight: 500,
 };
 
 const eventNameStyle = {
-  fontSize: "1.1rem",
+  fontFamily: '"Bebas Neue", "Impact", sans-serif',
+  fontSize: "1.5rem",
   fontWeight: 600,
   margin: 0,
-  lineHeight: 1.3,
+  lineHeight: 1.2,
+  color: colors.textColor,
+  letterSpacing: "0.02em",
 };
 
 const eventMetaStyle = {
-  fontSize: "0.8rem",
-  opacity: 0.6,
+  fontSize: "0.9rem",
+  color: colors.textColor,
+  opacity: 0.7,
+  fontWeight: 500,
 };
 
 const eventStatusStyle = {
   display: "flex",
   gap: "0.5rem",
   flexWrap: "wrap",
-  minHeight: "1.5rem",
+  minHeight: "1.75rem",
+  alignItems: "center",
 };
 
 const scoredBadgeStyle = {
-  fontSize: "0.7rem",
-  padding: "0.25rem 0.5rem",
-  background: "#4ade80",
-  color: "#000",
-  borderRadius: "0.3rem",
+  fontSize: "0.75rem",
+  padding: "0.35rem 0.7rem",
+  background: "#22c55e",
+  color: "#fff",
+  borderRadius: "4px",
   fontWeight: 600,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.25rem",
 };
 
 const lockedBadgeStyle = {
-  fontSize: "0.7rem",
-  padding: "0.25rem 0.5rem",
-  background: "#f87171",
-  color: "#000",
-  borderRadius: "0.3rem",
+  fontSize: "0.75rem",
+  padding: "0.35rem 0.7rem",
+  background: "#ef4444",
+  color: "#fff",
+  borderRadius: "4px",
   fontWeight: 600,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.25rem",
 };
 
 const pickedBadgeStyle = {
-  fontSize: "0.7rem",
-  padding: "0.25rem 0.5rem",
-  background: "#ffd600",
-  color: "#000",
-  borderRadius: "0.3rem",
+  fontSize: "0.75rem",
+  padding: "0.35rem 0.7rem",
+  background: colors.primary,
+  color: "#fff",
+  borderRadius: "4px",
   fontWeight: 600,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.25rem",
 };
 
 const makePicksButtonStyle = {
   appearance: "none",
-  border: "0",
-  borderRadius: "0.6rem",
-  padding: "0.75rem",
-  background:
-    "radial-gradient(circle at 20% 20%, rgba(255,214,0,1) 0%, rgba(255,132,0,1) 60%, rgba(170,60,0,1) 100%)",
+  border: "none",
+  borderRadius: "8px",
+  padding: "1rem",
+  background: `linear-gradient(135deg, ${colors.buttonGradientStart}, ${colors.buttonGradientEnd})`,
   fontWeight: 600,
-  fontSize: "0.9rem",
-  color: "#000",
+  fontSize: "1rem",
+  color: colors.buttonText,
   textAlign: "center",
   cursor: "pointer",
+  transition: "all 0.3s ease",
+  boxShadow: `0 4px 12px ${colors.primary}40`,
+  fontFamily: '"Roboto", sans-serif',
 };
 
 const disabledButtonStyle = {
-  opacity: 0.5,
+  opacity: 0.4,
   cursor: "not-allowed",
-};
-
-const footerStyle = {
-  fontSize: "0.7rem",
-  textAlign: "center",
-  opacity: 0.5,
-  marginTop: "2rem",
-  lineHeight: 1.4,
+  background: `${colors.borderColor}`,
+  boxShadow: "none",
 };

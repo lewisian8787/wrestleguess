@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { db } from "./firebase";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import NavBar from "./NavBar";
+import colors from "./theme";
 
 export default function StandingsPage() {
   const { leagueId } = useParams();
@@ -57,10 +58,11 @@ export default function StandingsPage() {
     return (
       <>
         <NavBar />
-        <ScreenWrapper>
-          <Header title="Loading standings..." />
-          <StatusBox text="Fetching league data..." />
-        </ScreenWrapper>
+        <div style={pageStyle}>
+          <div style={containerStyle}>
+            <div style={loadingStyle}>Loading standings...</div>
+          </div>
+        </div>
       </>
     );
   }
@@ -69,10 +71,12 @@ export default function StandingsPage() {
     return (
       <>
         <NavBar />
-        <ScreenWrapper>
-          <Header title="Error" />
-          <StatusBox text={error} />
-        </ScreenWrapper>
+        <div style={pageStyle}>
+          <div style={containerStyle}>
+            <h1 style={titleStyle}>Error</h1>
+            <div style={errorStyle}>{error}</div>
+          </div>
+        </div>
       </>
     );
   }
@@ -80,250 +84,336 @@ export default function StandingsPage() {
   return (
     <>
       <NavBar />
-      <ScreenWrapper>
-        <Header title={`${leagueData?.name || "League"} Standings`} />
+      <div style={pageStyle}>
+        <div style={containerStyle}>
+          <h1 style={titleStyle}>{leagueData?.name || "League"} Standings</h1>
+          <p style={subtitleStyle}>
+            {leagueData?.joinCode && `Join Code: ${leagueData.joinCode}`}
+          </p>
 
-      <div style={standingsCardStyle}>
-        <div style={standingsHeaderStyle}>
-          <span style={rankColumnStyle}>Rank</span>
-          <span style={nameColumnStyle}>Player</span>
-          <span style={pointsColumnStyle}>Points</span>
-        </div>
-
-        {standings.length === 0 ? (
-          <div style={emptyStateStyle}>
-            No scores yet. Make picks and have an admin score an event to see standings!
-          </div>
-        ) : (
-          standings.map((member, index) => (
-            <div
-              key={member.userId}
-              style={{
-                ...standingsRowStyle,
-                background: index === 0 ? "#2a2a3a" : index % 2 === 0 ? "#1a1a22" : "#16161e"
-              }}
-            >
-              <span style={rankColumnStyle}>
-                {index === 0 && "🏆 "}
-                {index === 1 && "🥈 "}
-                {index === 2 && "🥉 "}
-                #{index + 1}
-              </span>
-              <span style={nameColumnStyle}>{member.displayName || "Guest"}</span>
-              <span style={pointsColumnStyle}>
-                {(member.totalPoints || 0).toFixed(1)}
-              </span>
+          {/* Standings Table */}
+          <div style={standingsContainerStyle}>
+            <div style={standingsHeaderStyle}>
+              <span style={rankColumnHeaderStyle}>Rank</span>
+              <span style={nameColumnHeaderStyle}>Player</span>
+              <span style={pointsColumnHeaderStyle}>Points</span>
             </div>
-          ))
-        )}
-      </div>
 
-      {/* Event Breakdown Section */}
-      {standings.length > 0 && standings.some(m => m.eventScores && Object.keys(m.eventScores).length > 0) && (
-        <div style={{ marginTop: "1.5rem" }}>
-          <button
-            onClick={() => setShowBreakdown(!showBreakdown)}
-            style={breakdownToggleStyle}
-          >
-            {showBreakdown ? "Hide" : "Show"} Event Breakdown
-          </button>
+            {standings.length === 0 ? (
+              <div style={emptyStateStyle}>
+                <p style={emptyTextStyle}>No scores yet.</p>
+                <p style={emptySubTextStyle}>
+                  Make picks and have an admin score an event to see standings!
+                </p>
+              </div>
+            ) : (
+              standings.map((member, index) => (
+                <div
+                  key={member.userId}
+                  style={{
+                    ...standingsRowStyle,
+                    background: index === 0 ? `${colors.primary}10` : (index % 2 === 0 ? "#F8F8F8" : colors.background)
+                  }}
+                >
+                  <span style={rankColumnStyle}>
+                    {index === 0 && <span style={medalStyle}>🏆</span>}
+                    {index === 1 && <span style={medalStyle}>🥈</span>}
+                    {index === 2 && <span style={medalStyle}>🥉</span>}
+                    <span style={rankNumberStyle}>#{index + 1}</span>
+                  </span>
+                  <span style={nameColumnStyle}>{member.displayName || "Guest"}</span>
+                  <span style={pointsColumnStyle}>
+                    {(member.totalPoints || 0).toFixed(1)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
 
-          {showBreakdown && (
-            <div style={{ marginTop: "1rem" }}>
-              {standings.map(member => {
-                const eventScores = member.eventScores || {};
-                const eventIds = Object.keys(eventScores);
+          {/* Event Breakdown Section */}
+          {standings.length > 0 && standings.some(m => m.eventScores && Object.keys(m.eventScores).length > 0) && (
+            <div style={breakdownSectionStyle}>
+              <button
+                onClick={() => setShowBreakdown(!showBreakdown)}
+                style={breakdownToggleButtonStyle}
+                onMouseEnter={(e) => {
+                  e.target.style.background = colors.primary;
+                  e.target.style.color = colors.buttonText;
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = "transparent";
+                  e.target.style.color = colors.primary;
+                }}
+              >
+                {showBreakdown ? "Hide" : "Show"} Event Breakdown
+              </button>
 
-                if (eventIds.length === 0) return null;
+              {showBreakdown && (
+                <div style={breakdownContentStyle}>
+                  {standings.map(member => {
+                    const eventScores = member.eventScores || {};
+                    const eventIds = Object.keys(eventScores);
 
-                return (
-                  <div key={member.userId} style={breakdownCardStyle}>
-                    <div style={breakdownHeaderStyle}>
-                      {member.displayName || "Guest"} - Event History
-                    </div>
-                    {eventIds.map(eventId => {
-                      const score = eventScores[eventId];
-                      return (
-                        <div key={eventId} style={breakdownRowStyle}>
-                          <span style={{ flex: 1, fontSize: "0.8rem" }}>{eventId}</span>
-                          <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                            {score.points?.toFixed(1)} pts
-                          </span>
-                          <span style={{ fontSize: "0.75rem", opacity: 0.7, marginLeft: "0.5rem" }}>
-                            ({score.correctPicks}/{score.totalPicks})
-                          </span>
+                    if (eventIds.length === 0) return null;
+
+                    return (
+                      <div key={member.userId} style={breakdownCardStyle}>
+                        <div style={breakdownHeaderStyle}>
+                          {member.displayName || "Guest"} - Event History
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                        <div style={breakdownListStyle}>
+                          {eventIds.map(eventId => {
+                            const score = eventScores[eventId];
+                            return (
+                              <div key={eventId} style={breakdownRowStyle}>
+                                <span style={breakdownEventIdStyle}>{eventId}</span>
+                                <span style={breakdownScoreStyle}>
+                                  {score.points?.toFixed(1)} pts
+                                </span>
+                                <span style={breakdownPicksStyle}>
+                                  ({score.correctPicks}/{score.totalPicks})
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
-
-      <Footer />
-    </ScreenWrapper>
+      </div>
     </>
   );
 }
 
-/* ----- Helper Components ----- */
-function ScreenWrapper({ children }) {
-  return (
-    <div style={screenWrapperStyle}>
-      {children}
-    </div>
-  );
-}
+/* ---------- STYLES ---------- */
 
-function Header({ title }) {
-  return (
-    <h1 style={headerStyle}>
-      {title}
-    </h1>
-  );
-}
+const pageStyle = {
+  minHeight: "calc(100vh - 60px)",
+  background: "#F8F8F8",
+  fontFamily: '"Roboto", sans-serif',
+  padding: "3rem 2rem",
+};
 
-function StatusBox({ text }) {
-  if (!text) return null;
-  return (
-    <div style={statusBoxStyle}>
-      {text}
-    </div>
-  );
-}
-
-function Footer() {
-  return (
-    <p style={footerStyle}>
-      prototype build • not for gambling • bragging rights only
-    </p>
-  );
-}
-
-/* ----- Styles ----- */
-const screenWrapperStyle = {
-  minHeight: "100vh",
-  backgroundColor: "#0b0b10",
-  color: "white",
-  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-  padding: "1.5rem",
-  maxWidth: "480px",
+const containerStyle = {
+  maxWidth: "900px",
   margin: "0 auto",
+  width: "100%",
 };
 
-const headerStyle = {
+const titleStyle = {
+  fontFamily: '"Bebas Neue", "Impact", sans-serif',
+  fontSize: "2.5rem",
+  color: colors.primary,
+  textAlign: "center",
+  margin: "0 0 0.5rem 0",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+
+const subtitleStyle = {
+  fontSize: "1rem",
+  color: colors.textColor,
+  textAlign: "center",
+  opacity: 0.7,
+  marginBottom: "2.5rem",
+  fontWeight: 500,
+};
+
+const loadingStyle = {
+  textAlign: "center",
+  padding: "4rem 2rem",
   fontSize: "1.1rem",
-  fontWeight: 600,
-  marginBottom: "1rem",
+  color: colors.textColor,
+  opacity: 0.6,
+};
+
+const errorStyle = {
+  background: "#fee2e2",
+  border: "1px solid #ef4444",
+  borderRadius: "8px",
+  padding: "1.5rem",
+  fontSize: "1rem",
+  color: "#dc2626",
   textAlign: "center",
 };
 
-const statusBoxStyle = {
-  background: "#1f1f29",
-  border: "1px solid #3a3a55",
-  borderRadius: "0.75rem",
-  padding: "0.75rem",
-  fontSize: "0.8rem",
-  marginBottom: "1rem",
-  textAlign: "center",
-  lineHeight: 1.4,
-};
-
-const standingsCardStyle = {
-  background: "#1a1a22",
-  border: "1px solid #2f2f44",
-  borderRadius: "0.75rem",
+const standingsContainerStyle = {
+  background: colors.background,
+  borderRadius: "12px",
+  border: `1px solid ${colors.borderColor}`,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
   overflow: "hidden",
+  marginBottom: "2rem",
 };
 
 const standingsHeaderStyle = {
   display: "flex",
-  padding: "0.75rem 1rem",
-  background: "#262636",
-  fontWeight: 600,
-  fontSize: "0.8rem",
-  borderBottom: "1px solid #3a3a55",
+  padding: "1rem 1.5rem",
+  background: "#F8F8F8",
+  fontWeight: 700,
+  fontSize: "0.85rem",
+  borderBottom: `2px solid ${colors.borderColor}`,
   textTransform: "uppercase",
+  color: colors.textColor,
   opacity: 0.8,
+  letterSpacing: "0.05em",
 };
 
 const standingsRowStyle = {
   display: "flex",
-  padding: "0.75rem 1rem",
-  borderBottom: "1px solid #2a2a3a",
-  fontSize: "0.9rem",
+  padding: "1rem 1.5rem",
+  borderBottom: `1px solid ${colors.borderColor}`,
+  fontSize: "1rem",
   alignItems: "center",
+  transition: "all 0.2s ease",
+};
+
+const rankColumnHeaderStyle = {
+  width: "5rem",
+  flexShrink: 0,
 };
 
 const rankColumnStyle = {
-  width: "4rem",
+  width: "5rem",
   flexShrink: 0,
+  display: "flex",
+  alignItems: "center",
+  gap: "0.5rem",
+};
+
+const medalStyle = {
+  fontSize: "1.2rem",
+};
+
+const rankNumberStyle = {
+  fontWeight: 600,
+  color: colors.textColor,
+};
+
+const nameColumnHeaderStyle = {
+  flex: 1,
 };
 
 const nameColumnStyle = {
   flex: 1,
-  fontWeight: 500,
+  fontWeight: 600,
+  color: colors.textColor,
+};
+
+const pointsColumnHeaderStyle = {
+  width: "6rem",
+  textAlign: "right",
 };
 
 const pointsColumnStyle = {
-  width: "4.5rem",
+  width: "6rem",
   textAlign: "right",
-  fontWeight: 600,
-  color: "#ffd600",
+  fontWeight: 700,
+  color: colors.primary,
+  fontSize: "1.05rem",
 };
 
 const emptyStateStyle = {
-  padding: "2rem 1rem",
+  padding: "4rem 2rem",
   textAlign: "center",
-  fontSize: "0.85rem",
-  opacity: 0.7,
-  lineHeight: 1.5,
 };
 
-const breakdownToggleStyle = {
-  appearance: "none",
-  border: "1px solid #3a3a55",
-  borderRadius: "0.6rem",
-  background: "#1a1a22",
-  color: "#fff",
-  padding: "0.75rem 1rem",
-  fontSize: "0.85rem",
+const emptyTextStyle = {
+  fontSize: "1.2rem",
+  color: colors.textColor,
+  margin: "0 0 0.5rem 0",
   fontWeight: 500,
+};
+
+const emptySubTextStyle = {
+  fontSize: "1rem",
+  color: colors.textColor,
+  opacity: 0.6,
+  margin: 0,
+  lineHeight: 1.6,
+};
+
+const breakdownSectionStyle = {
+  marginTop: "2rem",
+};
+
+const breakdownToggleButtonStyle = {
+  appearance: "none",
+  border: `2px solid ${colors.primary}`,
+  borderRadius: "8px",
+  background: "transparent",
+  color: colors.primary,
+  padding: "0.9rem 1.5rem",
+  fontSize: "1rem",
+  fontWeight: 600,
   width: "100%",
   cursor: "pointer",
   textAlign: "center",
+  transition: "all 0.2s ease",
+  fontFamily: '"Roboto", sans-serif',
+};
+
+const breakdownContentStyle = {
+  marginTop: "1.5rem",
+  display: "flex",
+  flexDirection: "column",
+  gap: "1rem",
 };
 
 const breakdownCardStyle = {
-  background: "#1a1a22",
-  border: "1px solid #2f2f44",
-  borderRadius: "0.6rem",
-  padding: "0.75rem",
-  marginBottom: "0.75rem",
+  background: colors.background,
+  border: `1px solid ${colors.borderColor}`,
+  borderRadius: "12px",
+  padding: "1.5rem",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
 };
 
 const breakdownHeaderStyle = {
-  fontSize: "0.85rem",
-  fontWeight: 600,
-  marginBottom: "0.5rem",
-  paddingBottom: "0.5rem",
-  borderBottom: "1px solid #3a3a55",
+  fontSize: "1rem",
+  fontWeight: 700,
+  marginBottom: "1rem",
+  paddingBottom: "0.75rem",
+  borderBottom: `1px solid ${colors.borderColor}`,
+  color: colors.textColor,
+};
+
+const breakdownListStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "0.75rem",
 };
 
 const breakdownRowStyle = {
   display: "flex",
   alignItems: "center",
-  padding: "0.5rem 0",
-  fontSize: "0.85rem",
+  padding: "0.75rem",
+  background: "#F8F8F8",
+  borderRadius: "6px",
+  fontSize: "0.9rem",
 };
 
-const footerStyle = {
-  fontSize: "0.7rem",
-  textAlign: "center",
-  opacity: 0.5,
-  marginTop: "2rem",
-  lineHeight: 1.4,
+const breakdownEventIdStyle = {
+  flex: 1,
+  fontSize: "0.85rem",
+  color: colors.textColor,
+  opacity: 0.8,
+};
+
+const breakdownScoreStyle = {
+  fontSize: "0.95rem",
+  fontWeight: 700,
+  color: colors.primary,
+  marginRight: "0.75rem",
+};
+
+const breakdownPicksStyle = {
+  fontSize: "0.8rem",
+  color: colors.textColor,
+  opacity: 0.6,
+  fontWeight: 500,
 };
