@@ -13,6 +13,8 @@ import {
 } from "firebase/firestore";
 import { calculateAndUpdateScores } from "./scoringEngine";
 
+//test line for commit
+
 export default function AdminEventPanel() {
   // ---------- ADMIN GATE STATE ----------
   const [checked, setChecked] = useState(false);
