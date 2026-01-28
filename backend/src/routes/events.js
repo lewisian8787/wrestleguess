@@ -2,7 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import Event from '../models/Event.js';
 import Pick from '../models/Pick.js';
-import League from '../models/League.js';
+import * as leagueRepository from '../repositories/leagueRepository.js';
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -166,37 +166,25 @@ router.post('/:id/score', protect, admin, async (req, res) => {
 
     // Update all league standings
     for (const [userId, scoreData] of Object.entries(userScores)) {
-      const userLeagues = scoreData.leagues;
+      // Get all leagues for this user from PostgreSQL
+      const userLeagues = await leagueRepository.getUserLeagues(userId);
 
-      for (const leagueId of userLeagues) {
-        const league = await League.findById(leagueId);
-        if (!league) continue;
-
-        const memberIndex = league.members.findIndex(m => m.user.toString() === userId);
-        if (memberIndex === -1) continue;
-
-        const member = league.members[memberIndex];
-
-        // Check if already scored for this event
-        if (member.eventScores.has(event._id.toString()) &&
-            member.eventScores.get(event._id.toString()).scored) {
-          continue;
-        }
-
-        // Update event score
-        member.eventScores.set(event._id.toString(), {
+      for (const league of userLeagues) {
+        // Update event score in PostgreSQL
+        const eventScoreData = {
           points: scoreData.points,
           correctPicks: scoreData.correctPicks,
           totalPicks: scoreData.totalPicks,
           scored: true,
-          scoredAt: new Date()
+          scoredAt: new Date().toISOString()
+        };
+
+        await leagueRepository.updateMemberEventScore({
+          leagueId: league.id,
+          userId: userId,
+          eventId: event._id.toString(),
+          scoreData: eventScoreData
         });
-
-        // Update total points
-        member.totalPoints += scoreData.points;
-
-        league.members[memberIndex] = member;
-        await league.save();
       }
     }
 

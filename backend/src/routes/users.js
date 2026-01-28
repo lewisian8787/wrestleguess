@@ -1,6 +1,6 @@
 import express from 'express';
-import User from '../models/User.js';
-import League from '../models/League.js';
+import * as userRepository from '../repositories/userRepository.js';
+import * as leagueRepository from '../repositories/leagueRepository.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -10,35 +10,16 @@ const router = express.Router();
 // @access  Public
 router.get('/leaderboard', async (req, res) => {
   try {
-    // Get all leagues and aggregate user scores
-    const leagues = await League.find();
+    const leaderboard = await leagueRepository.getGlobalLeaderboard(100);
 
-    const userScores = {};
-
-    for (const league of leagues) {
-      for (const member of league.members) {
-        const userId = member.user.toString();
-
-        if (!userScores[userId]) {
-          userScores[userId] = {
-            userId,
-            displayName: member.displayName,
-            totalScore: 0,
-            leagues: 0
-          };
-        }
-
-        userScores[userId].totalScore += member.totalPoints;
-        userScores[userId].leagues += 1;
-      }
-    }
-
-    // Convert to array and sort by total score
-    const leaderboard = Object.values(userScores)
-      .sort((a, b) => b.totalScore - a.totalScore)
-      .slice(0, 100); // Top 100
-
-    res.json({ leaderboard });
+    res.json({
+      leaderboard: leaderboard.map(entry => ({
+        userId: entry.userId,
+        displayName: entry.displayName,
+        totalScore: parseFloat(entry.totalScore),
+        leagues: parseInt(entry.leagues)
+      }))
+    });
   } catch (error) {
     console.error('Get leaderboard error:', error);
     res.status(500).json({ message: 'Server error fetching leaderboard' });
@@ -50,10 +31,9 @@ router.get('/leaderboard', async (req, res) => {
 // @access  Private
 router.get('/profile', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .populate('leagues', 'name joinCode');
+    const user = await userRepository.getUserWithLeagues(req.user.id);
 
-    res.json({ user: user.toPublicJSON() });
+    res.json({ user: userRepository.toPublicJSON(user) });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ message: 'Server error fetching profile' });

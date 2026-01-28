@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import connectDB from './config/database.js';
+import connectMongoDB from './config/mongodb.js';
+import { connectPostgres } from './config/postgres.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -13,8 +14,15 @@ import userRoutes from './routes/users.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// Connect to databases
+const initializeDatabases = async () => {
+  await Promise.all([
+    connectMongoDB(),
+    connectPostgres()
+  ]);
+};
+
+initializeDatabases();
 
 // Initialize Express app
 const app = express();

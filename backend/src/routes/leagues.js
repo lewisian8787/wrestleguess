@@ -1,7 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import League from '../models/League.js';
-import User from '../models/User.js';
+import * as leagueRepository from '../repositories/leagueRepository.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -35,32 +34,27 @@ router.post('/', protect,
       let codeExists = true;
       while (codeExists) {
         joinCode = generateJoinCode();
-        const existing = await League.findOne({ joinCode });
+        const existing = await leagueRepository.findLeagueByJoinCode(joinCode);
         if (!existing) codeExists = false;
       }
 
-      // Create league with creator as first member
-      const league = await League.create({
-        name: name.trim(),
+      // Create league with creator as first member (transaction inside repository)
+      const league = await leagueRepository.createLeague({
+        name,
         joinCode,
-        createdBy: req.user._id,
-        members: [{
-          user: req.user._id,
-          displayName: req.user.displayName,
-          totalPoints: 0,
-          eventScores: {},
-          joinedAt: new Date()
-        }]
-      });
-
-      // Add league to user's leagues array
-      await User.findByIdAndUpdate(req.user._id, {
-        $addToSet: { leagues: league._id }
+        createdBy: req.user.id,
+        creatorDisplayName: req.user.displayName
       });
 
       res.status(201).json({
         message: 'League created successfully',
-        league
+        league: {
+          id: league.id,
+          name: league.name,
+          joinCode: league.join_code,
+          createdBy: league.created_by,
+          createdAt: league.created_at
+        }
       });
     } catch (error) {
       console.error('Create league error:', error);
@@ -84,35 +78,34 @@ router.post('/join',
       const { joinCode } = req.body;
 
       // Find league by join code
-      const league = await League.findOne({ joinCode: joinCode.toUpperCase() });
+      const league = await leagueRepository.findLeagueByJoinCode(joinCode);
       if (!league) {
         return res.status(404).json({ message: 'No league found with that code' });
       }
 
-      // Check if user is already a member
-      const isMember = league.members.some(m => m.user.toString() === req.user._id.toString());
-      if (isMember) {
-        return res.status(400).json({ message: 'You are already a member of this league' });
+      // Add user to league (transaction inside repository, checks if already member)
+      try {
+        await leagueRepository.addUserToLeague({
+          leagueId: league.id,
+          userId: req.user.id,
+          displayName: req.user.displayName
+        });
+      } catch (error) {
+        if (error.message.includes('already a member')) {
+          return res.status(400).json({ message: 'You are already a member of this league' });
+        }
+        throw error;
       }
-
-      // Add user to league members
-      league.members.push({
-        user: req.user._id,
-        displayName: req.user.displayName,
-        totalPoints: 0,
-        eventScores: {},
-        joinedAt: new Date()
-      });
-      await league.save();
-
-      // Add league to user's leagues array
-      await User.findByIdAndUpdate(req.user._id, {
-        $addToSet: { leagues: league._id }
-      });
 
       res.json({
         message: 'Successfully joined league',
-        league
+        league: {
+          id: league.id,
+          name: league.name,
+          joinCode: league.join_code,
+          createdBy: league.created_by,
+          createdAt: league.created_at
+        }
       });
     } catch (error) {
       console.error('Join league error:', error);
@@ -126,11 +119,18 @@ router.post('/join',
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const leagues = await League.find({ 'members.user': req.user._id })
-      .populate('createdBy', 'displayName email')
-      .sort({ createdAt: -1 });
+    const leagues = await leagueRepository.getUserLeagues(req.user.id);
 
-    res.json({ leagues });
+    // Transform to match expected API format
+    const transformedLeagues = leagues.map(l => ({
+      id: l.id,
+      name: l.name,
+      joinCode: l.join_code,
+      createdBy: l.created_by_user,
+      createdAt: l.created_at
+    }));
+
+    res.json({ leagues: transformedLeagues });
   } catch (error) {
     console.error('Get leagues error:', error);
     res.status(500).json({ message: 'Server error fetching leagues' });
@@ -142,21 +142,35 @@ router.get('/', protect, async (req, res) => {
 // @access  Private
 router.get('/:id', protect, async (req, res) => {
   try {
-    const league = await League.findById(req.params.id)
-      .populate('createdBy', 'displayName email')
-      .populate('members.user', 'displayName email');
+    const league = await leagueRepository.getLeagueWithMembers(req.params.id);
 
     if (!league) {
       return res.status(404).json({ message: 'League not found' });
     }
 
     // Check if user is a member
-    const isMember = league.members.some(m => m.user._id.toString() === req.user._id.toString());
+    const isMember = league.members.some(m => m.user_id === req.user.id);
     if (!isMember) {
       return res.status(403).json({ message: 'You are not a member of this league' });
     }
 
-    res.json({ league });
+    // Transform to match expected API format
+    const transformedLeague = {
+      id: league.id,
+      name: league.name,
+      joinCode: league.join_code,
+      createdBy: league.created_by_user,
+      createdAt: league.created_at,
+      members: league.members.map(m => ({
+        user: m.user,
+        displayName: m.display_name,
+        totalPoints: parseFloat(m.total_points),
+        eventScores: m.event_scores,
+        joinedAt: m.joined_at
+      }))
+    };
+
+    res.json({ league: transformedLeague });
   } catch (error) {
     console.error('Get league error:', error);
     res.status(500).json({ message: 'Server error fetching league' });
@@ -168,37 +182,34 @@ router.get('/:id', protect, async (req, res) => {
 // @access  Private
 router.get('/:id/standings', protect, async (req, res) => {
   try {
-    const league = await League.findById(req.params.id)
-      .populate('members.user', 'displayName email');
+    const league = await leagueRepository.findLeagueById(req.params.id);
 
     if (!league) {
       return res.status(404).json({ message: 'League not found' });
     }
 
     // Check if user is a member
-    const isMember = league.members.some(m => m.user._id.toString() === req.user._id.toString());
+    const isMember = await leagueRepository.isUserMemberOfLeague(req.user.id, league.id);
     if (!isMember) {
       return res.status(403).json({ message: 'You are not a member of this league' });
     }
 
-    // Sort members by totalPoints descending
-    const standings = league.members
-      .map(m => ({
-        userId: m.user._id,
-        displayName: m.displayName,
-        totalPoints: m.totalPoints,
-        eventScores: m.eventScores,
-        joinedAt: m.joinedAt
-      }))
-      .sort((a, b) => b.totalPoints - a.totalPoints);
+    // Get standings
+    const standings = await leagueRepository.getLeagueStandings(league.id);
 
     res.json({
       league: {
-        id: league._id,
+        id: league.id,
         name: league.name,
-        joinCode: league.joinCode
+        joinCode: league.join_code
       },
-      standings
+      standings: standings.map(s => ({
+        userId: s.userId,
+        displayName: s.displayName,
+        totalPoints: parseFloat(s.totalPoints),
+        eventScores: s.eventScores,
+        joinedAt: s.joinedAt
+      }))
     });
   } catch (error) {
     console.error('Get standings error:', error);

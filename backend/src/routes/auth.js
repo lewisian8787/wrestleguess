@@ -1,7 +1,8 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import User from '../models/User.js';
-import { generateToken } from '../middleware/auth.js';
+import * as userRepository from '../repositories/userRepository.js';
+import { comparePassword } from '../utils/password.js';
+import { generateToken, protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -25,26 +26,25 @@ router.post('/register',
       const { email, password, displayName } = req.body;
 
       // Check if user already exists
-      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      const existingUser = await userRepository.findUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: 'User already exists with this email' });
       }
 
-      // Create new user
-      const user = await User.create({
-        email: email.toLowerCase(),
+      // Create new user (password is hashed in repository)
+      const user = await userRepository.createUser({
+        email,
         password,
-        displayName: displayName.trim(),
-        leagues: []
+        displayName
       });
 
       // Generate token
-      const token = generateToken(user._id);
+      const token = generateToken(user.id);
 
       res.status(201).json({
         message: 'User registered successfully',
         token,
-        user: user.toPublicJSON()
+        user: userRepository.toPublicJSON(user)
       });
     } catch (error) {
       console.error('Registration error:', error);
@@ -72,25 +72,25 @@ router.post('/login',
       const { email, password } = req.body;
 
       // Find user and include password for comparison
-      const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+      const user = await userRepository.findUserByEmail(email, true);
 
       if (!user) {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
 
       // Check password
-      const isMatch = await user.comparePassword(password);
+      const isMatch = await comparePassword(password, user.password);
       if (!isMatch) {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
 
       // Generate token
-      const token = generateToken(user._id);
+      const token = generateToken(user.id);
 
       res.json({
         message: 'Login successful',
         token,
-        user: user.toPublicJSON()
+        user: userRepository.toPublicJSON(user)
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -102,12 +102,12 @@ router.post('/login',
 // @route   GET /api/auth/me
 // @desc    Get current user
 // @access  Private
-import { protect } from '../middleware/auth.js';
-
 router.get('/me', protect, async (req, res) => {
   try {
+    const user = await userRepository.getUserWithLeagues(req.user.id);
+
     res.json({
-      user: req.user.toPublicJSON()
+      user: userRepository.toPublicJSON(user)
     });
   } catch (error) {
     console.error('Get me error:', error);
