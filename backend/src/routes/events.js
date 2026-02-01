@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import Event from '../models/Event.js';
-import Pick from '../models/Pick.js';
+import * as eventRepository from '../repositories/eventRepository.js';
+import * as pickRepository from '../repositories/pickRepository.js';
 import * as leagueRepository from '../repositories/leagueRepository.js';
 import { protect, admin } from '../middleware/auth.js';
 
@@ -12,9 +12,7 @@ const router = express.Router();
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const events = await Event.find()
-      .sort({ date: -1 })
-      .select('-__v');
+    const events = await eventRepository.findAllEvents({ includeMatches: true });
 
     res.json({ events });
   } catch (error) {
@@ -28,7 +26,7 @@ router.get('/', protect, async (req, res) => {
 // @access  Private
 router.get('/:id', protect, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    const event = await eventRepository.findEventById(req.params.id, true);
 
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -59,14 +57,12 @@ router.post('/', protect, admin,
 
       const { name, brand, date, matches } = req.body;
 
-      const event = await Event.create({
+      const event = await eventRepository.createEvent({
         name: name.trim(),
         brand: brand || 'Wrestling',
         date: new Date(date),
-        matches,
-        locked: false,
-        scored: false,
-        createdBy: req.user._id
+        matches: matches.map((m, idx) => ({ ...m, match_order: idx })),
+        createdBy: req.user.id
       });
 
       res.status(201).json({
@@ -87,27 +83,29 @@ router.put('/:id', protect, admin, async (req, res) => {
   try {
     const { name, brand, date, matches, locked } = req.body;
 
-    const event = await Event.findById(req.params.id);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
-
     // Don't allow editing if event is scored
-    if (event.scored) {
+    if (await eventRepository.isEventScored(req.params.id)) {
       return res.status(400).json({ message: 'Cannot edit a scored event' });
     }
 
-    if (name) event.name = name.trim();
-    if (brand) event.brand = brand;
-    if (date) event.date = new Date(date);
-    if (matches) event.matches = matches;
-    if (typeof locked === 'boolean') event.locked = locked;
+    const updates = {};
+    if (name) updates.name = name.trim();
+    if (brand) updates.brand = brand;
+    if (date) updates.date = new Date(date);
+    if (typeof locked === 'boolean') updates.locked = locked;
 
-    await event.save();
+    await eventRepository.updateEvent(req.params.id, updates);
+
+    if (matches) {
+      const formattedMatches = matches.map((m, idx) => ({ ...m, match_order: idx }));
+      await eventRepository.updateMatches(req.params.id, formattedMatches);
+    }
+
+    const updatedEvent = await eventRepository.findEventById(req.params.id, true);
 
     res.json({
       message: 'Event updated successfully',
-      event
+      event: updatedEvent
     });
   } catch (error) {
     console.error('Update event error:', error);
@@ -120,7 +118,7 @@ router.put('/:id', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.post('/:id/score', protect, admin, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    const event = await eventRepository.findEventById(req.params.id, true);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -136,7 +134,7 @@ router.post('/:id/score', protect, admin, async (req, res) => {
     }
 
     // Get all picks for this event
-    const picks = await Pick.find({ event: event._id }).populate('user', 'displayName leagues');
+    const picks = await pickRepository.findPicksByEvent(event.id);
 
     // Calculate scores for each user
     const userScores = {};
@@ -148,7 +146,7 @@ router.post('/:id/score', protect, admin, async (req, res) => {
 
       // Calculate points for each match
       for (const match of event.matches) {
-        const userChoice = pick.choices.get(match.matchId);
+        const userChoice = pick.choices.find(c => c.matchId === match.matchId);
         if (userChoice && userChoice.winner === match.winner) {
           const points = userChoice.confidence * match.multiplier;
           totalPoints += points;
@@ -156,11 +154,10 @@ router.post('/:id/score', protect, admin, async (req, res) => {
         }
       }
 
-      userScores[pick.user._id.toString()] = {
+      userScores[pick.userId] = {
         points: totalPoints,
         correctPicks,
-        totalPicks,
-        leagues: pick.user.leagues
+        totalPicks
       };
     }
 
@@ -182,21 +179,21 @@ router.post('/:id/score', protect, admin, async (req, res) => {
         await leagueRepository.updateMemberEventScore({
           leagueId: league.id,
           userId: userId,
-          eventId: event._id.toString(),
+          eventId: event.id,
           scoreData: eventScoreData
         });
       }
     }
 
     // Mark event as scored
-    event.scored = true;
-    event.scoredAt = new Date();
-    await event.save();
+    await eventRepository.scoreEvent(event.id);
+
+    const scoredEvent = await eventRepository.findEventById(event.id, true);
 
     res.json({
       message: 'Event scored successfully',
       usersScored: Object.keys(userScores).length,
-      event
+      event: scoredEvent
     });
   } catch (error) {
     console.error('Score event error:', error);
@@ -209,7 +206,7 @@ router.post('/:id/score', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.delete('/:id', protect, admin, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    const event = await eventRepository.findEventById(req.params.id, false);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -219,10 +216,8 @@ router.delete('/:id', protect, admin, async (req, res) => {
       return res.status(400).json({ message: 'Cannot delete a scored event' });
     }
 
-    // Delete all picks for this event
-    await Pick.deleteMany({ event: event._id });
-
-    await event.deleteOne();
+    // Delete event (CASCADE will delete matches, picks, and pick_choices)
+    await eventRepository.deleteEvent(event.id);
 
     res.json({ message: 'Event deleted successfully' });
   } catch (error) {

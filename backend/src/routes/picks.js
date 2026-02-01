@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import Pick from '../models/Pick.js';
-import Event from '../models/Event.js';
+import * as pickRepository from '../repositories/pickRepository.js';
+import * as eventRepository from '../repositories/eventRepository.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -25,7 +25,7 @@ router.post('/', protect,
       const { eventId, choices, totalConfidence } = req.body;
 
       // Check if event exists
-      const event = await Event.findById(eventId);
+      const event = await eventRepository.findEventById(eventId, true);
       if (!event) {
         return res.status(404).json({ message: 'Event not found' });
       }
@@ -36,10 +36,9 @@ router.post('/', protect,
       }
 
       // Validate choices format and total confidence
-      const choicesMap = new Map(Object.entries(choices));
       let calculatedTotal = 0;
 
-      for (const [matchId, choice] of choicesMap.entries()) {
+      for (const [matchId, choice] of Object.entries(choices)) {
         if (!choice.winner || typeof choice.confidence !== 'number') {
           return res.status(400).json({ message: 'Invalid choice format' });
         }
@@ -53,25 +52,21 @@ router.post('/', protect,
       }
 
       // Check if all matches have picks
-      if (choicesMap.size !== event.matches.length) {
+      if (Object.keys(choices).length !== event.matches.length) {
         return res.status(400).json({
           message: 'You must make a pick for every match'
         });
       }
 
       // Create or update pick
-      const pick = await Pick.findOneAndUpdate(
-        { event: eventId, user: req.user._id },
-        {
-          event: eventId,
-          user: req.user._id,
-          choices: choicesMap,
-          totalConfidence,
-          version: 2,
-          submittedAt: new Date()
-        },
-        { upsert: true, new: true }
-      );
+      const pickId = await pickRepository.createOrUpdatePick({
+        eventId,
+        userId: req.user.id,
+        choices,
+        totalConfidence
+      });
+
+      const pick = await pickRepository.findPickById(pickId, true);
 
       res.json({
         message: 'Picks saved successfully',
@@ -89,20 +84,16 @@ router.post('/', protect,
 // @access  Private
 router.get('/event/:eventId', protect, async (req, res) => {
   try {
-    const pick = await Pick.findOne({
-      event: req.params.eventId,
-      user: req.user._id
-    }).populate('event', 'name date locked scored');
+    const pick = await pickRepository.findPickByEventAndUser(
+      req.params.eventId,
+      req.user.id
+    );
 
     if (!pick) {
       return res.status(404).json({ message: 'No picks found for this event' });
     }
 
-    // Convert Map to plain object for JSON response
-    const pickData = pick.toObject();
-    pickData.choices = Object.fromEntries(pick.choices);
-
-    res.json({ pick: pickData });
+    res.json({ pick });
   } catch (error) {
     console.error('Get picks error:', error);
     res.status(500).json({ message: 'Server error fetching picks' });
@@ -114,18 +105,9 @@ router.get('/event/:eventId', protect, async (req, res) => {
 // @access  Private
 router.get('/user', protect, async (req, res) => {
   try {
-    const picks = await Pick.find({ user: req.user._id })
-      .populate('event', 'name date locked scored')
-      .sort({ submittedAt: -1 });
+    const picks = await pickRepository.findPicksByUser(req.user.id);
 
-    // Convert Maps to plain objects
-    const picksData = picks.map(pick => {
-      const pickObj = pick.toObject();
-      pickObj.choices = Object.fromEntries(pick.choices);
-      return pickObj;
-    });
-
-    res.json({ picks: picksData });
+    res.json({ picks });
   } catch (error) {
     console.error('Get user picks error:', error);
     res.status(500).json({ message: 'Server error fetching picks' });
@@ -138,7 +120,7 @@ router.get('/user', protect, async (req, res) => {
 router.delete('/event/:eventId', protect, async (req, res) => {
   try {
     // Check if event is locked
-    const event = await Event.findById(req.params.eventId);
+    const event = await eventRepository.findEventById(req.params.eventId, false);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -147,14 +129,7 @@ router.delete('/event/:eventId', protect, async (req, res) => {
       return res.status(400).json({ message: 'Event is locked. Cannot delete picks.' });
     }
 
-    const pick = await Pick.findOneAndDelete({
-      event: req.params.eventId,
-      user: req.user._id
-    });
-
-    if (!pick) {
-      return res.status(404).json({ message: 'No picks found for this event' });
-    }
+    await pickRepository.deletePickByEventAndUser(req.params.eventId, req.user.id);
 
     res.json({ message: 'Picks deleted successfully' });
   } catch (error) {
