@@ -47,7 +47,7 @@ async function seedTestData() {
 
     // 3. Create test league
     let league;
-    const testJoinCode = 'TEST123';
+    const testJoinCode = 'TEST12';
     const existingLeague = await leagueRepository.findLeagueByJoinCode(testJoinCode);
 
     if (existingLeague) {
