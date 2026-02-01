@@ -47,36 +47,33 @@ async function seedTestData() {
 
     // 3. Create test league
     let league;
-    const existingLeagues = await leagueRepository.getLeaguesByCreator(admin.id);
-    const testLeague = existingLeagues.find(l => l.name === 'Test League');
+    const testJoinCode = 'TEST123';
+    const existingLeague = await leagueRepository.findLeagueByJoinCode(testJoinCode);
 
-    if (testLeague) {
-      league = testLeague;
+    if (existingLeague) {
+      league = existingLeague;
       console.log('✓ Test league already exists:', league.name);
     } else {
       league = await leagueRepository.createLeague({
         name: 'Test League',
-        description: 'A test league for trying out WrestleGuess',
+        joinCode: testJoinCode,
         createdBy: admin.id,
-        settings: {
-          public: true,
-          allowJoinRequests: true
-        }
+        creatorDisplayName: admin.displayName
       });
       console.log('✓ Test league created:', league.name);
     }
 
     console.log('  League UUID:', league.id);
+    console.log('  Join code:', testJoinCode, '\n');
 
     // 4. Add test user to league (if not already a member)
-    const leagueMembers = await leagueRepository.getLeagueMembers(league.id);
-    const testUserIsMember = leagueMembers.some(m => m.userId === testUser.id);
+    const isMember = await leagueRepository.isUserMemberOfLeague(testUser.id, league.id);
 
-    if (!testUserIsMember) {
-      await leagueRepository.addMemberToLeague({
+    if (!isMember) {
+      await leagueRepository.addUserToLeague({
         leagueId: league.id,
         userId: testUser.id,
-        role: 'member'
+        displayName: testUser.displayName
       });
       console.log('✓ Test user added to league\n');
     } else {
