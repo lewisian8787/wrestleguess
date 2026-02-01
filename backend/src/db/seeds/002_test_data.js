@@ -58,7 +58,7 @@ async function seedTestData() {
         name: 'Test League',
         joinCode: testJoinCode,
         createdBy: admin.id,
-        creatorDisplayName: admin.displayName
+        creatorDisplayName: admin.display_name
       });
       console.log('✓ Test league created:', league.name);
     }
@@ -73,7 +73,7 @@ async function seedTestData() {
       await leagueRepository.addUserToLeague({
         leagueId: league.id,
         userId: testUser.id,
-        displayName: testUser.displayName
+        displayName: testUser.display_name
       });
       console.log('✓ Test user added to league\n');
     } else {
