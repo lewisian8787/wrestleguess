@@ -1,26 +1,46 @@
-// src/auth.js
-import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, getIdTokenResult } from "firebase/auth";
-import { auth } from "./firebase";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { getCurrentUser, logout as apiLogout, isAuthenticated, getCachedUser } from "./api/auth.js";
 
-const AuthCtx = createContext({ user: null, claims: {}, loading: true });
+const AuthCtx = createContext({ user: null, claims: {}, loading: true, logout: () => {} });
 
 export function AuthProvider({ children }) {
   const [state, setState] = useState({ user: null, claims: {}, loading: true });
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) return setState({ user: null, claims: {}, loading: false });
-
-      const token = await getIdTokenResult(user).catch(() => null);
-      setState({ user, claims: token?.claims ?? {}, loading: false });
-    });
-
-    return unsub;
+  const logout = useCallback(() => {
+    apiLogout();
+    setState({ user: null, claims: {}, loading: false });
   }, []);
 
-  return <AuthCtx.Provider value={state}>{children}</AuthCtx.Provider>;
+  useEffect(() => {
+    async function validateToken() {
+      if (!isAuthenticated()) {
+        setState({ user: null, claims: {}, loading: false });
+        return;
+      }
+
+      try {
+        const user = await getCurrentUser();
+        setState({
+          user,
+          claims: { admin: user.isAdmin },
+          loading: false,
+        });
+      } catch (error) {
+        console.error("Token validation failed:", error);
+        apiLogout();
+        setState({ user: null, claims: {}, loading: false });
+      }
+    }
+
+    validateToken();
+  }, []);
+
+  return (
+    <AuthCtx.Provider value={{ ...state, logout }}>
+      {children}
+    </AuthCtx.Provider>
+  );
 }
 
 export function useAuth() {

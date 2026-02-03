@@ -1,36 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "./firebase";
-import { signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { useAuth } from "./auth";
 import colors from "./theme";
 import small_logo from "./assets/images/small_logo.png";
 
 export default function NavBar() {
   const navigate = useNavigate();
-  const [displayName, setDisplayName] = useState("");
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setDisplayName(userSnap.data().displayName || "User");
-        }
-      }
-    })();
-  }, []);
+  const displayName = user?.displayName || "User";
 
-  async function handleLogout() {
-    try {
-      await signOut(auth);
-      navigate("/login");
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
+  function handleLogout() {
+    logout();
+    navigate("/login");
   }
 
   return (

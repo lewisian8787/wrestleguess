@@ -1,8 +1,9 @@
-// src/AdminLogin.jsx
 import { useState } from "react";
-import { signInEmailPassword } from "./authSignIn";
+import { useNavigate } from "react-router-dom";
+import { login } from "./api/auth.js";
 
 export default function AdminLogin() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
@@ -11,8 +12,12 @@ export default function AdminLogin() {
     e.preventDefault();
     setStatus("Logging in...");
     try {
-      await signInEmailPassword(email, password);
-      window.location.href = "/admin/event";
+      const data = await login({ email, password });
+      if (!data.user.isAdmin) {
+        setStatus("Access denied. Admin privileges required.");
+        return;
+      }
+      navigate("/admin/event");
     } catch (err) {
       setStatus("Error: " + err.message);
     }

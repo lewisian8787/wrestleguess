@@ -1,14 +1,11 @@
 import { useState } from "react";
-import { auth, db } from "./firebase";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+import { register, login } from "./api/auth.js";
 import colors from "./theme";
 import logo from "./assets/images/main_logo.png";
 
 export default function UserLogin() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState("login"); // "login" or "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,25 +29,15 @@ export default function UserLogin() {
     setStatus("Creating account...");
 
     try {
-      const { user } = await createUserWithEmailAndPassword(auth, email, password);
-
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        displayName: displayName.trim(),
-        leagues: [],
-        createdAt: new Date(),
-      });
-
+      await register({ email, password, displayName: displayName.trim() });
       setStatus("Account created! Redirecting...");
       setTimeout(() => {
-        window.location.href = "/home";
+        navigate("/home");
       }, 1000);
     } catch (err) {
       console.error(err);
-      if (err.code === "auth/email-already-in-use") {
+      if (err.message.includes("already exists")) {
         setStatus("Email already in use. Try logging in instead.");
-      } else if (err.code === "auth/invalid-email") {
-        setStatus("Invalid email address");
       } else {
         setStatus("Error: " + err.message);
       }
@@ -69,14 +56,14 @@ export default function UserLogin() {
     setStatus("Logging in...");
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await login({ email, password });
       setStatus("Login successful! Redirecting...");
       setTimeout(() => {
-        window.location.href = "/home";
+        navigate("/home");
       }, 500);
     } catch (err) {
       console.error(err);
-      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found") {
+      if (err.message.includes("Invalid")) {
         setStatus("Invalid email or password");
       } else {
         setStatus("Error: " + err.message);

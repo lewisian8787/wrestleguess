@@ -66,7 +66,7 @@ router.post('/', protect,
 // @route   POST /api/leagues/join
 // @desc    Join a league by join code
 // @access  Private
-router.post('/join',
+router.post('/join', protect,
   [body('joinCode').trim().notEmpty().withMessage('Join code is required')],
   async (req, res) => {
     try {

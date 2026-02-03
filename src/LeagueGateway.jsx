@@ -1,176 +1,71 @@
 import { useEffect, useState } from "react";
-import { db, auth } from "./firebase";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  arrayUnion,
-  serverTimestamp,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { useAuth } from "./auth";
+import { getUserLeagues, createLeague, joinLeague } from "./api/leagues.js";
 import NavBar from "./NavBar";
 import colors from "./theme";
 
 export default function LeagueGateway() {
-  const [user, setUser] = useState(null);
-  const [userDisplayName, setUserDisplayName] = useState("");
+  const { user } = useAuth();
   const [userLeagues, setUserLeagues] = useState([]);
   const [createName, setCreateName] = useState("");
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // On mount, load user data and leagues
   useEffect(() => {
-    (async () => {
+    async function loadLeagues() {
       try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-
-        setUser(currentUser);
-
-        // load /users/{uid}
-        const userRef = doc(db, "users", currentUser.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          setUserDisplayName(data.displayName || "User");
-          const leagueIds = data.leagues || [];
-          // fetch league docs
-          const leaguesData = [];
-          for (const leagueId of leagueIds) {
-            const leagueRef = doc(db, "leagues", leagueId);
-            const leagueSnap = await getDoc(leagueRef);
-            if (leagueSnap.exists()) {
-              leaguesData.push({
-                id: leagueId,
-                ...leagueSnap.data(),
-              });
-            }
-          }
-          setUserLeagues(leaguesData);
-        }
+        const leagues = await getUserLeagues();
+        setUserLeagues(leagues);
       } catch (error) {
         console.error("Error loading leagues:", error);
         setStatus("Error loading leagues. Please refresh the page.");
       } finally {
         setLoading(false);
       }
-    })();
+    }
+
+    loadLeagues();
   }, []);
 
-  // Helper: create random short joinCode like ABC123
-  function generateJoinCode() {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let out = "";
-    for (let i = 0; i < 6; i++) {
-      out += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return out;
-  }
-
-  // CREATE LEAGUE
   async function handleCreateLeague(e) {
     e.preventDefault();
-    if (!user) return;
     if (!createName.trim()) return;
 
     setStatus("Creating league...");
 
-    // new league id = Firestore doc id we choose (use uid + timestamp for now)
-    const leagueId = `${user.uid}-${Date.now()}`;
-    const joinCode = generateJoinCode();
-
-    // 1. create league doc
-    const leagueRef = doc(db, "leagues", leagueId);
-    await setDoc(leagueRef, {
-      name: createName.trim(),
-      joinCode,
-      createdBy: user.uid,
-      createdAt: serverTimestamp(),
-    });
-
-    // 2. add self to league members subcollection
-    const memberRef = doc(db, "leagues", leagueId, "members", user.uid);
-    await setDoc(memberRef, {
-      displayName: userDisplayName || "User",
-      totalPoints: 0,
-      joinedAt: serverTimestamp(),
-    });
-
-    // 3. push leagueId into /users/{uid}.leagues (create doc if it doesn't exist)
-    const userRef = doc(db, "users", user.uid);
-    await setDoc(userRef, {
-      leagues: arrayUnion(leagueId),
-    }, { merge: true });
-
-    setStatus(`League created! Join code: ${joinCode}`);
-
-    // update local UI
-    setUserLeagues((prev) => [
-      ...prev,
-      {
-        id: leagueId,
-        name: createName.trim(),
-        joinCode,
-        createdBy: user.uid,
-      },
-    ]);
-
-    setCreateName("");
+    try {
+      const league = await createLeague({ name: createName.trim() });
+      setStatus(`League created! Join code: ${league.joinCode}`);
+      setUserLeagues((prev) => [...prev, league]);
+      setCreateName("");
+    } catch (error) {
+      console.error("Error creating league:", error);
+      setStatus("Error: " + error.message);
+    }
   }
 
-  // JOIN LEAGUE by code
   async function handleJoinLeague(e) {
     e.preventDefault();
-    if (!user) return;
     if (!joinCodeInput.trim()) return;
 
     setStatus("Joining league...");
 
-    // lookup league by joinCode
-    const q = query(
-      collection(db, "leagues"),
-      where("joinCode", "==", joinCodeInput.trim().toUpperCase())
-    );
-    const snap = await getDocs(q);
-
-    if (snap.empty) {
-      setStatus("No league found with that code.");
-      return;
+    try {
+      const league = await joinLeague({ joinCode: joinCodeInput.trim().toUpperCase() });
+      setStatus("Joined!");
+      setUserLeagues((prev) => [...prev, league]);
+      setJoinCodeInput("");
+    } catch (error) {
+      console.error("Error joining league:", error);
+      if (error.message.includes("No league found")) {
+        setStatus("No league found with that code.");
+      } else if (error.message.includes("already a member")) {
+        setStatus("You are already a member of this league.");
+      } else {
+        setStatus("Error: " + error.message);
+      }
     }
-
-    // assume first match
-    const leagueDoc = snap.docs[0];
-    const leagueId = leagueDoc.id;
-
-    // 1. add self to league members subcollection
-    const memberRef = doc(db, "leagues", leagueId, "members", user.uid);
-    await setDoc(memberRef, {
-      displayName: userDisplayName || "User",
-      totalPoints: 0,
-      joinedAt: serverTimestamp(),
-    });
-
-    // 2. push leagueId into /users/{uid}.leagues (create doc if it doesn't exist)
-    const userRef = doc(db, "users", user.uid);
-    await setDoc(userRef, {
-      leagues: arrayUnion(leagueId),
-    }, { merge: true });
-
-    setStatus("Joined!");
-
-    // update local list
-    setUserLeagues((prev) => [
-      ...prev,
-      { id: leagueId, ...leagueDoc.data() },
-    ]);
-
-    setJoinCodeInput("");
   }
 
   if (loading) {

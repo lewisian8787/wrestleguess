@@ -1,7 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { db } from "./firebase";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { getLeagueStandings } from "./api/leagues.js";
 import NavBar from "./NavBar";
 import colors from "./theme";
 
@@ -15,43 +14,23 @@ export default function StandingsPage() {
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    async function loadStandings() {
       try {
         setLoading(true);
         setError("");
 
-        // 1. Get league info
-        const leagueRef = doc(db, "leagues", leagueId);
-        const leagueSnap = await getDoc(leagueRef);
-
-        if (!leagueSnap.exists()) {
-          setError("League not found");
-          setLoading(false);
-          return;
-        }
-
-        setLeagueData(leagueSnap.data());
-
-        // 2. Get all members with their scores
-        const membersRef = collection(db, "leagues", leagueId, "members");
-        const membersSnap = await getDocs(membersRef);
-
-        // 3. Sort by totalPoints descending
-        const membersList = membersSnap.docs
-          .map(doc => ({
-            userId: doc.id,
-            ...doc.data()
-          }))
-          .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
-
-        setStandings(membersList);
-        setLoading(false);
+        const data = await getLeagueStandings(leagueId);
+        setLeagueData(data.league);
+        setStandings(data.standings);
       } catch (err) {
         console.error(err);
         setError(err.message);
+      } finally {
         setLoading(false);
       }
-    })();
+    }
+
+    loadStandings();
   }, [leagueId]);
 
   if (loading) {
