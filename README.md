@@ -6,11 +6,12 @@ WrestleGuess is a fantasy pick'em game for wrestling pay-per-view events (WWE, A
 - Predict the outcomes of wrestling matches.
 - Create or join mini-leagues to compete with friends.
 - National leaderboard to compare scores across all users.
-- Built with React, Firebase, and Vite.
 
 ## Tech Stack
-- **Frontend:** React, styled with CSS
-- **Backend/Database:** Firebase (Firestore for real-time data)
+- **Frontend:** React + Vite
+- **Backend:** Node.js + Express
+- **Database:** PostgreSQL
+- **Authentication:** JWT (JSON Web Tokens)
 - **Build Tools:** Vite for fast development and bundling
 
 ## Installation

@@ -1,38 +1,35 @@
-// src/authSignIn.js
-import { auth } from "./firebase";
-import {
-  onAuthStateChanged,
-  signInAnonymously,
-  signInWithEmailAndPassword,
-  signOut,
-} from "firebase/auth";
-
-let cachedUser = null;
+// src/authSignIn.js - JWT-based authentication (migrated from Firebase)
+import { getToken, clearAuth } from './api/client.js';
+import { login, logout as apiLogout, getCurrentUser, getCachedUser } from './api/auth.js';
 
 /** Returns the current user or null (no sign-in side effects). */
 export async function getCurrentUserOrNull() {
-  if (auth.currentUser) return auth.currentUser;
-  if (cachedUser) return cachedUser;
+  // First check cached user
+  const cached = getCachedUser();
+  if (cached) return cached;
 
-  // Wait one tick for any pending auth state (SSR/Vite cold start)
-  await new Promise((resolve) => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) cachedUser = u;
-      unsub();
-      resolve();
-    });
-  });
+  // Check if we have a token
+  const token = getToken();
+  if (!token) return null;
 
-  return auth.currentUser || cachedUser || null;
+  // Try to fetch current user from API
+  try {
+    const user = await getCurrentUser();
+    return user;
+  } catch (err) {
+    // Token invalid or expired
+    clearAuth();
+    return null;
+  }
 }
 
-/** Ensures there is a user (anon if needed) and returns it. */
+/**
+ * For JWT auth, we don't do anonymous sign-in.
+ * This returns the current user or null.
+ * Callers should redirect to login if no user.
+ */
 export async function getOrInitUser() {
-  const existing = await getCurrentUserOrNull();
-  if (existing) return (cachedUser = existing);
-  const { user } = await signInAnonymously(auth);
-  cachedUser = user;
-  return user;
+  return getCurrentUserOrNull();
 }
 
 /** Kept for callers that expect this name (LeagueGateway, etc.). */
@@ -40,17 +37,15 @@ export async function requireUserOrSignInAnonymouslyForDev() {
   return getOrInitUser();
 }
 
-/** Email/password sign-in for admin screens. */
+/** Email/password sign-in for admin screens and regular login. */
 export async function signInEmailPassword(email, password) {
-  const cred = await signInWithEmailAndPassword(auth, email, password);
-  cachedUser = cred.user;
-  return cred.user;
+  const data = await login({ email, password });
+  return data.user;
 }
 
-/** Optional helper some screens may import. */
+/** Sign out - clears local auth state. */
 export async function signOutUser() {
-  await signOut(auth);
-  cachedUser = null;
+  apiLogout();
 }
 
 /** Default export for convenience (some files may default-import). */

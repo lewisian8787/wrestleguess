@@ -13,11 +13,11 @@
 - ✅ League standings page
 - ✅ Admin panel for event management
 - ✅ Mobile-responsive design
-- ✅ **Currently using Firebase** (to be migrated)
+- ✅ **Migrated to JWT/PostgreSQL API** (Firebase removed)
 
-### Backend (Node.js + Express + MongoDB)
+### Backend (Node.js + Express + PostgreSQL)
 - ✅ Complete REST API server
-- ✅ MongoDB schemas (User, League, Event, Pick)
+- ✅ PostgreSQL database with proper schema
 - ✅ JWT authentication system
 - ✅ User registration & login endpoints
 - ✅ League CRUD operations
@@ -26,7 +26,7 @@
 - ✅ Automated scoring system
 - ✅ Global leaderboard endpoint
 - ✅ Docker configuration (docker-compose.yml)
-- ✅ Ready for Digital Ocean deployment
+- ✅ Ready for deployment
 
 ## 📦 Project Structure
 
@@ -75,15 +75,19 @@ wrestleguess/
 
 ## 🔄 Next Steps
 
-### Option 1: Test Backend Locally (Recommended First)
+### Running Locally
 
-1. **Install Docker Desktop:**
-   - Download: https://www.docker.com/products/docker-desktop/
-   - Install and start Docker
-
-2. **Start the backend:**
+1. **Start the backend:**
    ```bash
-   docker compose up -d
+   cd backend
+   npm install
+   npm run dev
+   ```
+
+2. **Start the frontend:**
+   ```bash
+   npm install
+   npm run dev
    ```
 
 3. **Test the API:**
@@ -91,58 +95,19 @@ wrestleguess/
    curl http://localhost:5000/api/health
    ```
 
-4. **Register a test user and try endpoints**
-   - See [BACKEND_SETUP.md](BACKEND_SETUP.md) for full testing guide
+### Deploy to Production
 
-### Option 2: Migrate Frontend to Use API
+1. **Set up PostgreSQL database**
 
-Once backend is tested, update frontend files:
+2. **Configure environment variables:**
+   - `POSTGRES_URI` - PostgreSQL connection string
+   - `JWT_SECRET` - Secret key for JWT tokens
+   - `VITE_API_URL` - Backend API URL for frontend
 
-1. **Remove Firebase dependencies:**
+3. **Build and deploy:**
    ```bash
-   npm uninstall firebase
+   npm run build
    ```
-
-2. **Install axios:**
-   ```bash
-   npm install axios
-   ```
-
-3. **Create API client utility:**
-   - Create `src/api/client.js`
-   - Handle JWT token storage/retrieval
-   - Wrap all API calls
-
-4. **Update components:**
-   - Replace Firebase calls with API calls
-   - Update authentication flow
-   - Test each feature incrementally
-
-### Option 3: Deploy to Digital Ocean
-
-After testing locally:
-
-1. **Create Digital Ocean Droplet**
-   - Size: Basic $6-12/month
-   - OS: Ubuntu 22.04
-
-2. **Install Docker on droplet:**
-   ```bash
-   ssh root@your-droplet-ip
-   curl -fsSL https://get.docker.com -o get-docker.sh
-   sh get-docker.sh
-   ```
-
-3. **Clone repo & deploy:**
-   ```bash
-   git clone your-repo
-   cd wrestleguess
-   docker compose up -d
-   ```
-
-4. **Optional: Set up domain & SSL**
-   - Point domain to droplet IP
-   - Use Let's Encrypt for free SSL
 
 ## 🎯 API Endpoints Summary
 

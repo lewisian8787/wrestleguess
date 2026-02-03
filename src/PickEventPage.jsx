@@ -1,15 +1,9 @@
 // src/PickEventPage.jsx
 import { useParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { db, auth } from "./firebase";
-import {
-  doc,
-  getDoc,
-  getDocs,
-  collection,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { getCurrentUserOrNull } from "./authSignIn";
+import { getEvent } from "./api/events.js";
+import { getPicksForEvent, submitPicks } from "./api/picks.js";
 import NavBar from "./NavBar";
 import colors from "./theme";
 
@@ -32,58 +26,61 @@ export default function PickEventPage() {
         setStatus("");
 
         // 1) get authenticated user
-        const u = auth.currentUser;
+        const u = await getCurrentUserOrNull();
         if (!u) {
-          setStatus("Not authenticated");
+          setStatus("Not authenticated. Please log in.");
           setLoading(false);
           return;
         }
         setUser(u);
 
         // 2) event
-        const eventRef = doc(db, "events", eventId);
-        const snap = await getDoc(eventRef);
-        if (!snap.exists()) {
+        const ev = await getEvent(eventId);
+        if (!ev) {
           setEventData(null);
           setStatus(`No such event: ${eventId}`);
           setLoading(false);
           return;
         }
 
-        const ev = snap.data();
+        // 3) matches are embedded in event from API
+        const matches = Array.isArray(ev.matches) ? ev.matches : [];
 
-        // 3) matches (embedded or subcollection)
-        let matches = Array.isArray(ev.matches) ? ev.matches : [];
-        if (!matches.length) {
-          const mSnap = await getDocs(collection(db, "events", eventId, "matches"));
-          matches = mSnap.docs.map(d => ({ matchId: d.id, ...d.data() }));
-        }
-
-        // 4) existing picks - handle both v1 (string) and v2 (object with confidence)
-        const pickRef = doc(db, "events", eventId, "picks", u.uid);
-        const pickSnap = await getDoc(pickRef);
+        // 4) existing picks
         let existingChoices = {};
         let isLegacy = false;
 
-        if (pickSnap.exists()) {
-          const pd = pickSnap.data();
-          if (pd?.choices && typeof pd.choices === "object") {
-            // Check if it's v1 (string values) or v2 (object values)
-            const firstValue = Object.values(pd.choices)[0];
-            if (typeof firstValue === "string") {
-              // v1 format - convert to read-only display format
-              isLegacy = true;
-              Object.keys(pd.choices).forEach(matchId => {
-                existingChoices[matchId] = {
-                  winner: pd.choices[matchId],
-                  confidence: 0
+        try {
+          const pickData = await getPicksForEvent(eventId);
+          if (pickData?.choices) {
+            // Convert array format to object format if needed
+            if (Array.isArray(pickData.choices)) {
+              pickData.choices.forEach(choice => {
+                existingChoices[choice.matchId] = {
+                  winner: choice.winner,
+                  confidence: choice.confidence || 0
                 };
               });
-            } else {
-              // v2 format - use as-is
-              existingChoices = pd.choices;
+            } else if (typeof pickData.choices === "object") {
+              // Check if it's v1 (string values) or v2 (object values)
+              const firstValue = Object.values(pickData.choices)[0];
+              if (typeof firstValue === "string") {
+                // v1 format - convert to read-only display format
+                isLegacy = true;
+                Object.keys(pickData.choices).forEach(matchId => {
+                  existingChoices[matchId] = {
+                    winner: pickData.choices[matchId],
+                    confidence: 0
+                  };
+                });
+              } else {
+                // v2 format - use as-is
+                existingChoices = pickData.choices;
+              }
             }
           }
+        } catch {
+          // No existing picks - that's fine
         }
 
         setIsLegacyPick(isLegacy);
@@ -160,17 +157,13 @@ export default function PickEventPage() {
       setSaving(true);
       setStatus("Saving picks…");
 
-      const pickRef = doc(db, "events", eventId, "picks", user.uid);
-      await setDoc(pickRef, {
-        userId: user.uid,
-        leagueId: null,
+      await submitPicks({
+        eventId,
         choices,
         totalConfidence,
-        version: 2,
-        submittedAt: serverTimestamp(),
       });
 
-      setStatus("Picks saved successfully! ✓");
+      setStatus("Picks saved successfully!");
     } catch (e) {
       console.error(e);
       setStatus(`Error saving picks: ${e.message || e}`);

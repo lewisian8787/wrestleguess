@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { db, auth } from "./firebase";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { getCurrentUserOrNull } from "./authSignIn";
+import { getEvents } from "./api/events.js";
+import { getUserPicks } from "./api/picks.js";
 import NavBar from "./NavBar";
 import colors from "./theme";
 
@@ -15,21 +16,15 @@ export default function EventsListPage() {
     (async () => {
       try {
         setLoading(true);
-        const user = auth.currentUser;
+        const user = await getCurrentUserOrNull();
 
         // Fetch all events
-        const eventsRef = collection(db, "events");
-        const eventsSnap = await getDocs(eventsRef);
-
-        const eventsList = eventsSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const eventsList = await getEvents();
 
         // Sort by date (most recent first)
         eventsList.sort((a, b) => {
-          const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
-          const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
           return dateB - dateA;
         });
 
@@ -37,13 +32,16 @@ export default function EventsListPage() {
 
         // Check which events the user has already picked
         if (user) {
-          const picksStatus = {};
-          for (const event of eventsList) {
-            const pickRef = doc(db, "events", event.id, "picks", user.uid);
-            const pickSnap = await getDoc(pickRef);
-            picksStatus[event.id] = pickSnap.exists();
+          try {
+            const picks = await getUserPicks();
+            const picksStatus = {};
+            (picks || []).forEach(pick => {
+              picksStatus[pick.eventId] = true;
+            });
+            setUserPicks(picksStatus);
+          } catch {
+            // User has no picks yet
           }
-          setUserPicks(picksStatus);
         }
 
         setLoading(false);

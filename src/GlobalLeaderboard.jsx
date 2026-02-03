@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { db } from "./firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { getGlobalLeaderboard } from "./api/users.js";
 import colors from "./theme";
 import small_logo from "./assets/images/small_logo.png";
 
@@ -16,40 +15,8 @@ export default function GlobalLeaderboard() {
   async function loadLeaderboard() {
     setLoading(true);
     try {
-      // Get all leagues
-      const leaguesSnap = await getDocs(collection(db, "leagues"));
-
-      // Aggregate scores across all leagues
-      const userScores = {};
-
-      for (const leagueDoc of leaguesSnap.docs) {
-        const membersSnap = await getDocs(collection(db, "leagues", leagueDoc.id, "members"));
-
-        for (const memberDoc of membersSnap.docs) {
-          const data = memberDoc.data();
-          const userId = memberDoc.id;
-          const displayName = data.displayName || "Anonymous";
-          const totalScore = data.totalScore || 0;
-
-          if (!userScores[userId]) {
-            userScores[userId] = {
-              displayName,
-              totalScore: 0,
-              leagues: 0,
-            };
-          }
-
-          userScores[userId].totalScore += totalScore;
-          userScores[userId].leagues += 1;
-        }
-      }
-
-      // Convert to array and sort by total score
-      const leaderboardData = Object.values(userScores)
-        .sort((a, b) => b.totalScore - a.totalScore)
-        .slice(0, 100); // Top 100
-
-      setLeaderboard(leaderboardData);
+      const leaderboardData = await getGlobalLeaderboard();
+      setLeaderboard(leaderboardData || []);
     } catch (err) {
       console.error("Error loading leaderboard:", err);
     }

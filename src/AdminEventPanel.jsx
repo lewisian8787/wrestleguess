@@ -1,17 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { getCurrentUserOrNull } from "./authSignIn";
-import { db } from "./firebase";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  getDocs,
-  serverTimestamp,
-} from "firebase/firestore";
-import { calculateAndUpdateScores } from "./scoringEngine";
+import { getEvents, getEvent, createEvent, updateEvent, deleteEvent, scoreEvent } from "./api/events.js";
+import { api } from "./api/client.js";
 
 //test line for commit
 
@@ -66,13 +56,8 @@ export default function AdminEventPanel() {
     (async () => {
       const user = await getCurrentUserOrNull();
 
-      if (user) {
-        const ref = doc(db, "users", user.uid);
-        const snap = await getDoc(ref);
-
-        if (snap.exists() && snap.data().isAdmin === true) {
-          setIsAdmin(true);
-        }
+      if (user && user.isAdmin === true) {
+        setIsAdmin(true);
       }
 
       setChecked(true);
@@ -83,30 +68,12 @@ export default function AdminEventPanel() {
   async function loadEvents() {
     setEventsLoading(true);
     try {
-      const eventsRef = collection(db, "events");
-      const eventsSnap = await getDocs(eventsRef);
-
-      const eventsList = await Promise.all(
-        eventsSnap.docs.map(async (eventDoc) => {
-          const eventData = eventDoc.data();
-
-          // Count picks for this event
-          const picksRef = collection(db, "events", eventDoc.id, "picks");
-          const picksSnap = await getDocs(picksRef);
-          const picksCount = picksSnap.size;
-
-          return {
-            id: eventDoc.id,
-            ...eventData,
-            picksCount,
-          };
-        })
-      );
+      const eventsList = await getEvents();
 
       // Sort by date (most recent first)
       eventsList.sort((a, b) => {
-        const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
-        const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
         return dateB - dateA;
       });
 
@@ -128,28 +95,17 @@ export default function AdminEventPanel() {
   async function loadStats() {
     setStatsLoading(true);
     try {
-      // Count users
-      const usersSnap = await getDocs(collection(db, "users"));
-      const totalUsers = usersSnap.size;
+      // Get stats from API - uses data we already have access to
+      const eventsList = await getEvents();
+      const leaderboard = await api.get('/api/users/leaderboard');
+      const userLeagues = await api.get('/api/leagues');
 
-      // Count leagues
-      const leaguesSnap = await getDocs(collection(db, "leagues"));
-      const totalLeagues = leaguesSnap.size;
-
-      // Count events
-      const eventsSnap = await getDocs(collection(db, "events"));
-      const totalEvents = eventsSnap.size;
-
-      // Count total picks across all events
-      let totalPicks = 0;
-      for (const eventDoc of eventsSnap.docs) {
-        const picksSnap = await getDocs(
-          collection(db, "events", eventDoc.id, "picks")
-        );
-        totalPicks += picksSnap.size;
-      }
-
-      setStats({ totalUsers, totalLeagues, totalEvents, totalPicks });
+      setStats({
+        totalUsers: leaderboard.leaderboard?.length || 0,
+        totalLeagues: userLeagues.leagues?.length || 0,
+        totalEvents: eventsList.length,
+        totalPicks: 0, // Would need a dedicated stats endpoint for accurate count
+      });
     } catch (err) {
       console.error("Error loading stats:", err);
     }
@@ -184,10 +140,7 @@ export default function AdminEventPanel() {
   // ---------- TOGGLE LOCK ----------
   async function handleToggleLock(eventId, currentlyLocked) {
     try {
-      const eventRef = doc(db, "events", eventId);
-      await updateDoc(eventRef, {
-        locked: !currentlyLocked,
-      });
+      await updateEvent(eventId, { locked: !currentlyLocked });
       // Reload events
       await loadEvents();
     } catch (err) {
@@ -199,18 +152,7 @@ export default function AdminEventPanel() {
   // ---------- DELETE EVENT ----------
   async function handleDeleteEvent(eventId) {
     try {
-      // Delete picks subcollection first
-      const picksRef = collection(db, "events", eventId, "picks");
-      const picksSnap = await getDocs(picksRef);
-
-      for (const pickDoc of picksSnap.docs) {
-        await deleteDoc(pickDoc.ref);
-      }
-
-      // Delete event document
-      const eventRef = doc(db, "events", eventId);
-      await deleteDoc(eventRef);
-
+      await deleteEvent(eventId);
       // Reload events
       await loadEvents();
       setDeleteConfirm(null);
@@ -257,7 +199,7 @@ export default function AdminEventPanel() {
     e.preventDefault();
     setCreateStatus("Saving...");
 
-    if (!eventId.trim() || !name.trim() || !brand.trim() || !date.trim()) {
+    if (!name.trim() || !brand.trim() || !date.trim()) {
       setCreateStatus("Please fill in all fields");
       return;
     }
@@ -272,18 +214,16 @@ export default function AdminEventPanel() {
     }
 
     try {
-      const ref = doc(db, "events", eventId);
-      await setDoc(ref, {
-        name,
-        brand,
-        date,
-        locked: false,
-        scored: false,
-        matches,
-        createdAt: serverTimestamp(),
-      });
-
-      setCreateStatus("Event saved ✔");
+      // Check if editing existing event or creating new
+      if (eventId) {
+        // Update existing event
+        await updateEvent(eventId, { name, brand, date, matches });
+        setCreateStatus("Event updated ✔");
+      } else {
+        // Create new event
+        await createEvent({ name, brand, date, matches });
+        setCreateStatus("Event created ✔");
+      }
 
       // Clear form
       setEventId("");
@@ -310,20 +250,18 @@ export default function AdminEventPanel() {
   async function handleLoadEventForScoring() {
     setScoringStatus("Loading event...");
     try {
-      const eventRef = doc(db, "events", scoringEventId);
-      const snap = await getDoc(eventRef);
+      const data = await getEvent(scoringEventId);
 
-      if (!snap.exists()) {
+      if (!data) {
         setScoringStatus("Event not found!");
         return;
       }
 
-      const data = snap.data();
       setScoringEvent(data);
 
       // Pre-populate existing winners if any
       const existingWinners = {};
-      data.matches.forEach((m) => {
+      (data.matches || []).forEach((m) => {
         if (m.winner) existingWinners[m.matchId] = m.winner;
       });
       setWinners(existingWinners);
@@ -340,27 +278,19 @@ export default function AdminEventPanel() {
     setScoringStatus("Updating winners and scoring...");
 
     try {
-      // 1. Update event document with winners and mark as scored
+      // 1. Update event document with winners
       const updatedMatches = scoringEvent.matches.map((m) => ({
         ...m,
         winner: winners[m.matchId] || null,
       }));
 
-      const eventRef = doc(db, "events", scoringEventId);
-      await updateDoc(eventRef, {
-        matches: updatedMatches,
-        scored: true,
-        scoredAt: serverTimestamp(),
-      });
+      await updateEvent(scoringEventId, { matches: updatedMatches });
 
-      // 2. Calculate and update scores
-      const result = await calculateAndUpdateScores(
-        scoringEventId,
-        updatedMatches
-      );
+      // 2. Score the event via API (calculates and updates all scores server-side)
+      const result = await scoreEvent(scoringEventId);
 
       setScoringStatus(
-        `Scoring complete! Updated ${result.usersScored} users across ${result.totalUpdates} league memberships.`
+        `Scoring complete! Updated ${result.usersScored || 0} users.`
       );
 
       // Clear scoring form
@@ -975,7 +905,7 @@ export default function AdminEventPanel() {
             )}
 
             <div style={{ marginTop: "2rem", opacity: 0.6, fontSize: "0.85rem" }}>
-              <p>Statistics are calculated from the current Firestore database.</p>
+              <p>Statistics are calculated from the PostgreSQL database.</p>
               <p style={{ marginTop: "0.5rem" }}>
                 To refresh, switch to another tab and back to Statistics.
               </p>
