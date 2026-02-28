@@ -164,6 +164,7 @@ export default function PickEventPage() {
       });
 
       setStatus("Picks saved successfully!");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       console.error(e);
       setStatus(`Error saving picks: ${e.message || e}`);
@@ -204,6 +205,7 @@ export default function PickEventPage() {
       <NavBar />
       <div style={pageStyle}>
         <div style={containerStyle}>
+          <a href="/home" style={backLinkStyle}>← Back to Home</a>
           <h1 style={titleStyle}>{eventData.name || "Make Your Picks"}</h1>
           <p style={subtitleStyle}>
             {eventData.brand || "Wrestling"} • {isNaN(eventDate) ? "Date TBD" : eventDate.toLocaleDateString()}
@@ -377,6 +379,7 @@ export default function PickEventPage() {
               {saving ? "Saving…" : "Save My Picks"}
             </button>
           )}
+          <a href="/home" style={backToHomeButtonStyle}>← Back to Home</a>
         </div>
       </div>
     </>
@@ -665,6 +668,32 @@ const noMatchesStyle = {
   textAlign: "center",
   color: colors.textColor,
   opacity: 0.6,
+};
+
+const backLinkStyle = {
+  display: "inline-block",
+  marginBottom: "1.5rem",
+  fontSize: "0.9rem",
+  color: colors.textColor,
+  textDecoration: "none",
+  opacity: 0.6,
+  fontWeight: 500,
+  transition: "opacity 0.2s ease",
+};
+
+const backToHomeButtonStyle = {
+  display: "block",
+  textAlign: "center",
+  marginTop: "1rem",
+  padding: "0.85rem",
+  borderRadius: "8px",
+  border: `2px solid ${colors.borderColor}`,
+  background: "transparent",
+  color: colors.textColor,
+  fontSize: "0.95rem",
+  fontWeight: 600,
+  textDecoration: "none",
+  transition: "all 0.2s ease",
 };
 
 const saveButtonStyle = {

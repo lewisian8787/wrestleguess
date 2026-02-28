@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { getGlobalLeaderboard } from "./api/users.js";
+import { useAuth } from "./auth.jsx";
+import NavBar from "./NavBar";
+import PublicNav from "./PublicNav";
 import colors from "./theme";
-import small_logo from "./assets/images/small_logo.png";
 
 export default function GlobalLeaderboard() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,50 +28,13 @@ export default function GlobalLeaderboard() {
 
   return (
     <div style={pageStyle}>
-      {/* Navigation */}
-      <nav style={navStyle}>
-        <div style={navContainerStyle}>
-          <a href="/" style={logoLinkStyle}>
-            <img src={small_logo} alt="WrestleGuess" style={smallLogoStyle} />
-          </a>
-
-          <div style={navLinksStyle} className="desktop-menu">
-            <a href="/how-to-play" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              How to Play
-            </a>
-            <a href="/leaderboard" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              Leaderboard
-            </a>
-            <a href="/login" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              Login
-            </a>
-            <a href="/login" style={signupButtonStyle}>Sign Up</a>
-          </div>
-
-          <button onClick={() => setMenuOpen(!menuOpen)} style={burgerButtonStyle} className="burger-menu">
-            <div style={burgerIconStyle}>
-              <span style={burgerLineStyle} />
-              <span style={burgerLineStyle} />
-              <span style={burgerLineStyle} />
-            </div>
-          </button>
-
-          {menuOpen && (
-            <div style={mobileMenuStyle}>
-              <a href="/how-to-play" style={mobileMenuLinkStyle}>How to Play</a>
-              <a href="/leaderboard" style={mobileMenuLinkStyle}>Leaderboard</a>
-              <a href="/login" style={mobileMenuLinkStyle}>Login</a>
-              <a href="/login" style={mobileSignupButtonStyle}>Sign Up</a>
-            </div>
-          )}
-        </div>
-      </nav>
+      {user ? <NavBar /> : <PublicNav />}
 
       {/* Main Content */}
       <main style={mainStyle}>
         <div style={containerStyle}>
           <h1 style={titleStyle}>Global Leaderboard</h1>
-          <p style={subtitleStyle}>Top players across all leagues worldwide</p>
+          <p style={subtitleStyle}>Top players worldwide — all-time standings</p>
 
           {loading ? (
             <div style={loadingStyle}>Loading leaderboard...</div>
@@ -84,7 +50,8 @@ export default function GlobalLeaderboard() {
                   <tr style={tableHeaderRowStyle}>
                     <th style={{ ...tableHeaderCellStyle, width: "80px" }}>Rank</th>
                     <th style={tableHeaderCellStyle}>Player</th>
-                    <th style={{ ...tableHeaderCellStyle, textAlign: "center" }}>Leagues</th>
+                    <th style={{ ...tableHeaderCellStyle, textAlign: "center" }}>Events</th>
+                    <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>Avg / Event</th>
                     <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>Total Points</th>
                   </tr>
                 </thead>
@@ -100,8 +67,22 @@ export default function GlobalLeaderboard() {
                           <span style={regularRankStyle}>#{index + 1}</span>
                         )}
                       </td>
-                      <td style={nameCellStyle}>{player.displayName}</td>
-                      <td style={{ ...tableCellStyle, textAlign: "center" }}>{player.leagues}</td>
+                      <td style={nameCellStyle}>
+                        <Link
+                          to={`/user/${player.userId}`}
+                          style={playerLinkStyle}
+                          onMouseEnter={e => e.target.style.color = colors.primary}
+                          onMouseLeave={e => e.target.style.color = colors.textColor}
+                        >
+                          {player.displayName}
+                        </Link>
+                      </td>
+                      <td style={{ ...tableCellStyle, textAlign: "center" }}>{player.eventsPlayed}</td>
+                      <td style={{ ...tableCellStyle, textAlign: "right", opacity: 0.75 }}>
+                        {player.eventsPlayed > 0
+                          ? (player.totalScore / player.eventsPlayed).toFixed(1)
+                          : "—"}
+                      </td>
                       <td style={{ ...pointsCellStyle, textAlign: "right" }}>
                         {Math.round(player.totalScore)}
                       </td>
@@ -114,15 +95,6 @@ export default function GlobalLeaderboard() {
         </div>
       </main>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-menu { display: none !important; }
-          .burger-menu { display: flex !important; }
-        }
-        @media (min-width: 769px) {
-          .burger-menu { display: none !important; }
-        }
-      `}</style>
     </div>
   );
 }
@@ -135,114 +107,6 @@ const pageStyle = {
   fontFamily: '"Roboto", sans-serif',
 };
 
-const navStyle = {
-  background: colors.background,
-  borderBottom: `1px solid ${colors.borderColor}`,
-  position: "sticky",
-  top: 0,
-  zIndex: 1000,
-  boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-};
-
-const navContainerStyle = {
-  maxWidth: "1200px",
-  margin: "0 auto",
-  padding: "1rem 2rem",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  position: "relative",
-};
-
-const logoLinkStyle = {
-  display: "flex",
-  alignItems: "center",
-  textDecoration: "none",
-};
-
-const smallLogoStyle = {
-  height: "40px",
-  width: "auto",
-};
-
-const navLinksStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "2rem",
-};
-
-const navLinkStyle = {
-  fontSize: "1rem",
-  fontWeight: 500,
-  color: colors.textColor,
-  textDecoration: "none",
-  transition: "color 0.2s ease",
-};
-
-const signupButtonStyle = {
-  fontSize: "0.95rem",
-  fontWeight: 600,
-  color: colors.buttonText,
-  textDecoration: "none",
-  background: colors.primary,
-  padding: "0.6rem 1.5rem",
-  borderRadius: "6px",
-  transition: "all 0.2s ease",
-};
-
-const burgerButtonStyle = {
-  display: "none",
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: "0.5rem",
-};
-
-const burgerIconStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "5px",
-};
-
-const burgerLineStyle = {
-  width: "25px",
-  height: "3px",
-  background: colors.textColor,
-  borderRadius: "2px",
-};
-
-const mobileMenuStyle = {
-  position: "absolute",
-  top: "100%",
-  right: "1rem",
-  background: colors.background,
-  border: `2px solid ${colors.borderColor}`,
-  borderRadius: "8px",
-  padding: "1rem",
-  display: "flex",
-  flexDirection: "column",
-  gap: "1rem",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-  minWidth: "200px",
-  marginTop: "0.5rem",
-};
-
-const mobileMenuLinkStyle = {
-  fontSize: "1rem",
-  color: colors.textColor,
-  textDecoration: "none",
-  padding: "0.5rem",
-};
-
-const mobileSignupButtonStyle = {
-  fontSize: "1rem",
-  color: colors.buttonText,
-  textDecoration: "none",
-  background: colors.primary,
-  padding: "0.6rem 1rem",
-  borderRadius: "6px",
-  textAlign: "center",
-};
 
 const mainStyle = {
   padding: "3rem 2rem",
@@ -371,4 +235,10 @@ const pointsCellStyle = {
   ...tableCellStyle,
   fontWeight: 700,
   color: colors.primary,
+};
+
+const playerLinkStyle = {
+  color: colors.textColor,
+  textDecoration: "none",
+  transition: "color 0.15s ease",
 };

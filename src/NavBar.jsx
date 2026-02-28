@@ -36,7 +36,7 @@ export default function NavBar() {
             onMouseEnter={(e) => e.target.style.color = colors.primary}
             onMouseLeave={(e) => e.target.style.color = colors.textColor}
           >
-            Leagues
+            Home
           </a>
           <a
             href="/events"
@@ -45,6 +45,30 @@ export default function NavBar() {
             onMouseLeave={(e) => e.target.style.color = colors.textColor}
           >
             Events
+          </a>
+          <a
+            href="/how-to-play"
+            style={navLinkStyle}
+            onMouseEnter={(e) => e.target.style.color = colors.primary}
+            onMouseLeave={(e) => e.target.style.color = colors.textColor}
+          >
+            How to Play
+          </a>
+          <a
+            href="/rules"
+            style={navLinkStyle}
+            onMouseEnter={(e) => e.target.style.color = colors.primary}
+            onMouseLeave={(e) => e.target.style.color = colors.textColor}
+          >
+            Rules
+          </a>
+          <a
+            href="/leaderboard"
+            style={navLinkStyle}
+            onMouseEnter={(e) => e.target.style.color = colors.primary}
+            onMouseLeave={(e) => e.target.style.color = colors.textColor}
+          >
+            Leaderboard
           </a>
           <div style={userMenuStyle}>
             <span style={userNameStyle}>{displayName}</span>
@@ -83,10 +107,19 @@ export default function NavBar() {
       {menuOpen && (
         <div style={mobileMenuStyle} className="mobile-menu">
           <a href="/home" style={mobileMenuLinkStyle}>
-            Leagues
+            Home
           </a>
           <a href="/events" style={mobileMenuLinkStyle}>
             Events
+          </a>
+          <a href="/how-to-play" style={mobileMenuLinkStyle}>
+            How to Play
+          </a>
+          <a href="/rules" style={mobileMenuLinkStyle}>
+            Rules
+          </a>
+          <a href="/leaderboard" style={mobileMenuLinkStyle}>
+            Leaderboard
           </a>
           <div style={mobileUserInfoStyle}>
             <span style={{ opacity: 0.6 }}>Logged in as</span>

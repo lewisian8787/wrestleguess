@@ -195,10 +195,10 @@ export async function getGlobalLeaderboard(limit = 100) {
     `SELECT
       u.id as "userId",
       u.display_name as "displayName",
-      SUM(lm.total_points) as "totalScore",
-      COUNT(DISTINCT lm.league_id) as leagues
+      SUM(p.points_earned) as "totalScore",
+      COUNT(p.id) as "eventsPlayed"
      FROM users u
-     JOIN league_members lm ON lm.user_id = u.id
+     JOIN picks p ON p.user_id = u.id AND p.points_earned IS NOT NULL
      GROUP BY u.id, u.display_name
      ORDER BY "totalScore" DESC
      LIMIT $1`,

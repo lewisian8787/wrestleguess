@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectPostgres } from './config/postgres.js';
+import { runMigrations } from './db/migrate.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -13,12 +14,6 @@ import userRoutes from './routes/users.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to database
-const initializeDatabases = async () => {
-  await connectPostgres();
-};
-
-initializeDatabases();
 
 // Initialize Express app
 const app = express();
@@ -71,6 +66,16 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+
+async function start() {
+  await connectPostgres();
+  await runMigrations();
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+  });
+}
+
+start().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });

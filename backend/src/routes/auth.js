@@ -1,15 +1,24 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import rateLimit from 'express-rate-limit';
 import * as userRepository from '../repositories/userRepository.js';
 import { comparePassword } from '../utils/password.js';
 import { generateToken, protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  message: { message: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
-router.post('/register',
+router.post('/register', authLimiter,
   [
     body('email').isEmail().withMessage('Please provide a valid email'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -56,7 +65,7 @@ router.post('/register',
 // @route   POST /api/auth/login
 // @desc    Login user
 // @access  Public
-router.post('/login',
+router.post('/login', authLimiter,
   [
     body('email').isEmail().withMessage('Please provide a valid email'),
     body('password').notEmpty().withMessage('Password is required')

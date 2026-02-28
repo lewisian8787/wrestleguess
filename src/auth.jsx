@@ -12,6 +12,10 @@ export function AuthProvider({ children }) {
     setState({ user: null, claims: {}, loading: false });
   }, []);
 
+  const setUser = useCallback((user) => {
+    setState({ user, claims: { admin: user.isAdmin }, loading: false });
+  }, []);
+
   useEffect(() => {
     async function validateToken() {
       if (!isAuthenticated()) {
@@ -37,7 +41,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthCtx.Provider value={{ ...state, logout }}>
+    <AuthCtx.Provider value={{ ...state, logout, setUser }}>
       {children}
     </AuthCtx.Provider>
   );

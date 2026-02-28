@@ -297,3 +297,21 @@ export async function isEventScored(eventId) {
   const result = await query('SELECT scored FROM events WHERE id = $1', [eventId]);
   return result.rows[0]?.scored || false;
 }
+
+/**
+ * Get top scorers for an event
+ * @param {string} eventId - Event UUID
+ * @param {number} limit - Number of top scorers to return
+ * @returns {Promise<Array>}
+ */
+export async function getEventTopScorers(eventId, limit = 5) {
+  const result = await query(`
+    SELECT u.id as user_id, u.display_name, p.points_earned, p.correct_picks
+    FROM picks p
+    JOIN users u ON u.id = p.user_id
+    WHERE p.event_id = $1 AND p.points_earned IS NOT NULL
+    ORDER BY p.points_earned DESC
+    LIMIT $2
+  `, [eventId, limit]);
+  return result.rows;
+}

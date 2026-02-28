@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { getCurrentUserOrNull } from "./authSignIn";
 import { getEvents } from "./api/events.js";
 import { getUserPicks } from "./api/picks.js";
@@ -98,7 +98,9 @@ export default function EventsListPage() {
                       </div>
                     </div>
 
-                    <h3 style={eventNameStyle}>{event.name || "Unnamed Event"}</h3>
+                    <Link to={`/event/${event.id}`} style={eventNameLinkStyle}>
+                      <h3 style={eventNameStyle}>{event.name || "Unnamed Event"}</h3>
+                    </Link>
 
                     {event.matches && (
                       <div style={eventMetaStyle}>
@@ -330,4 +332,9 @@ const disabledButtonStyle = {
   cursor: "not-allowed",
   background: `${colors.borderColor}`,
   boxShadow: "none",
+};
+
+const eventNameLinkStyle = {
+  textDecoration: "none",
+  color: "inherit",
 };

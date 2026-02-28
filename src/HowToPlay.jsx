@@ -1,50 +1,14 @@
-import { useState } from "react";
+import { useAuth } from "./auth.jsx";
+import NavBar from "./NavBar";
+import PublicNav from "./PublicNav";
 import colors from "./theme";
-import small_logo from "./assets/images/small_logo.png";
 
 export default function HowToPlay() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <div style={pageStyle}>
-      {/* Navigation */}
-      <nav style={navStyle}>
-        <div style={navContainerStyle}>
-          <a href="/" style={logoLinkStyle}>
-            <img src={small_logo} alt="WrestleGuess" style={smallLogoStyle} />
-          </a>
-
-          <div style={navLinksStyle} className="desktop-menu">
-            <a href="/how-to-play" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              How to Play
-            </a>
-            <a href="/leaderboard" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              Leaderboard
-            </a>
-            <a href="/login" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              Login
-            </a>
-            <a href="/login" style={signupButtonStyle}>Sign Up</a>
-          </div>
-
-          <button onClick={() => setMenuOpen(!menuOpen)} style={burgerButtonStyle} className="burger-menu">
-            <div style={burgerIconStyle}>
-              <span style={burgerLineStyle} />
-              <span style={burgerLineStyle} />
-              <span style={burgerLineStyle} />
-            </div>
-          </button>
-
-          {menuOpen && (
-            <div style={mobileMenuStyle}>
-              <a href="/how-to-play" style={mobileMenuLinkStyle}>How to Play</a>
-              <a href="/leaderboard" style={mobileMenuLinkStyle}>Leaderboard</a>
-              <a href="/login" style={mobileMenuLinkStyle}>Login</a>
-              <a href="/login" style={mobileSignupButtonStyle}>Sign Up</a>
-            </div>
-          )}
-        </div>
-      </nav>
+      {user ? <NavBar /> : <PublicNav />}
 
       {/* Main Content */}
       <main style={mainStyle}>
@@ -90,18 +54,19 @@ export default function HowToPlay() {
             <div style={rulesSectionStyle}>
               <h2 style={rulesTitleStyle}>Key Rules</h2>
               <ul style={rulesListStyle}>
-                <li style={ruleItemStyle}>
-                  <strong>100 Point Budget:</strong> You must allocate exactly 100 confidence points across all matches in an event
-                </li>
-                <li style={ruleItemStyle}>
-                  <strong>Match Multipliers:</strong> Title matches and main events often have higher multipliers (e.g., 1.5x or 2x)
-                </li>
-                <li style={ruleItemStyle}>
-                  <strong>Wrong Predictions:</strong> If you predict incorrectly, you earn 0 points for that match
-                </li>
-                <li style={ruleItemStyle}>
-                  <strong>Locked Picks:</strong> Once an event starts, your predictions are locked and cannot be changed
-                </li>
+                {[
+                  { label: "100 Point Budget", desc: "Allocate exactly 100 confidence points across all matches in an event" },
+                  { label: "Match Multipliers", desc: "Title matches and main events often have higher multipliers (e.g. 1.5x or 2x)" },
+                  { label: "Wrong Predictions", desc: "If you predict incorrectly, you earn 0 points for that match" },
+                  { label: "Locked Picks", desc: "Once an event starts, your predictions are locked and cannot be changed" },
+                ].map(({ label, desc }) => (
+                  <li key={label} style={ruleItemStyle}>
+                    <span style={ruleDotStyle} />
+                    <div>
+                      <strong>{label}:</strong> {desc}
+                    </div>
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -112,36 +77,29 @@ export default function HowToPlay() {
                 You have 100 points to allocate across 5 matches:
               </p>
               <div style={exampleTableStyle}>
-                <div style={exampleRowStyle}>
-                  <span style={exampleMatchStyle}>Match 1</span>
-                  <span style={exampleConfidenceStyle}>30 points</span>
-                  <span style={exampleMultiplierStyle}>1.0x</span>
-                  <span style={exampleResultStyle}>✓ Correct = 30 points</span>
-                </div>
-                <div style={exampleRowStyle}>
-                  <span style={exampleMatchStyle}>Match 2 (Title)</span>
-                  <span style={exampleConfidenceStyle}>25 points</span>
-                  <span style={exampleMultiplierStyle}>1.5x</span>
-                  <span style={exampleResultStyle}>✓ Correct = 37.5 points</span>
-                </div>
-                <div style={exampleRowStyle}>
-                  <span style={exampleMatchStyle}>Match 3</span>
-                  <span style={exampleConfidenceStyle}>20 points</span>
-                  <span style={exampleMultiplierStyle}>1.0x</span>
-                  <span style={exampleResultStyle}>✗ Wrong = 0 points</span>
-                </div>
-                <div style={exampleRowStyle}>
-                  <span style={exampleMatchStyle}>Match 4</span>
-                  <span style={exampleConfidenceStyle}>15 points</span>
-                  <span style={exampleMultiplierStyle}>1.0x</span>
-                  <span style={exampleResultStyle}>✓ Correct = 15 points</span>
-                </div>
-                <div style={exampleRowStyle}>
-                  <span style={exampleMatchStyle}>Match 5</span>
-                  <span style={exampleConfidenceStyle}>10 points</span>
-                  <span style={exampleMultiplierStyle}>1.0x</span>
-                  <span style={exampleResultStyle}>✓ Correct = 10 points</span>
-                </div>
+                {[
+                  { match: "Match 1",        confidence: 30, multiplier: 1.0, correct: true },
+                  { match: "Match 2 (Title)", confidence: 25, multiplier: 1.5, correct: true },
+                  { match: "Match 3",        confidence: 20, multiplier: 1.0, correct: false },
+                  { match: "Match 4",        confidence: 15, multiplier: 1.0, correct: true },
+                  { match: "Match 5",        confidence: 10, multiplier: 1.0, correct: true },
+                ].map(({ match, confidence, multiplier, correct }) => {
+                  const earned = correct ? confidence * multiplier : 0;
+                  return (
+                    <div key={match} className="example-row" style={exampleRowStyle}>
+                      <span className="ex-match" style={exampleMatchStyle}>{match}</span>
+                      <span className="ex-formula" style={exampleFormulaStyle}>
+                        {confidence} pts × {multiplier}x
+                      </span>
+                      <span
+                        className="ex-result"
+                        style={correct ? exampleCorrectStyle : exampleWrongStyle}
+                      >
+                        {correct ? `✓ ${earned} pts` : "✗ 0 pts"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
               <div style={exampleTotalStyle}>
                 <strong>Total Earned:</strong> 92.5 points
@@ -166,12 +124,19 @@ export default function HowToPlay() {
       </main>
 
       <style>{`
-        @media (max-width: 768px) {
-          .desktop-menu { display: none !important; }
-          .burger-menu { display: flex !important; }
-        }
-        @media (min-width: 769px) {
-          .burger-menu { display: none !important; }
+        @media (max-width: 600px) {
+          .example-row {
+            grid-template-columns: 1fr auto !important;
+            gap: 0.4rem 0.75rem !important;
+          }
+          .ex-formula {
+            grid-column: 1 / -1;
+            font-size: 0.8rem !important;
+            opacity: 0.65;
+          }
+          .ex-result {
+            text-align: right;
+          }
         }
       `}</style>
     </div>
@@ -186,114 +151,6 @@ const pageStyle = {
   fontFamily: '"Roboto", sans-serif',
 };
 
-const navStyle = {
-  background: colors.background,
-  borderBottom: `1px solid ${colors.borderColor}`,
-  position: "sticky",
-  top: 0,
-  zIndex: 1000,
-  boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-};
-
-const navContainerStyle = {
-  maxWidth: "1200px",
-  margin: "0 auto",
-  padding: "1rem 2rem",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  position: "relative",
-};
-
-const logoLinkStyle = {
-  display: "flex",
-  alignItems: "center",
-  textDecoration: "none",
-};
-
-const smallLogoStyle = {
-  height: "40px",
-  width: "auto",
-};
-
-const navLinksStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "2rem",
-};
-
-const navLinkStyle = {
-  fontSize: "1rem",
-  fontWeight: 500,
-  color: colors.textColor,
-  textDecoration: "none",
-  transition: "color 0.2s ease",
-};
-
-const signupButtonStyle = {
-  fontSize: "0.95rem",
-  fontWeight: 600,
-  color: colors.buttonText,
-  textDecoration: "none",
-  background: colors.primary,
-  padding: "0.6rem 1.5rem",
-  borderRadius: "6px",
-  transition: "all 0.2s ease",
-};
-
-const burgerButtonStyle = {
-  display: "none",
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: "0.5rem",
-};
-
-const burgerIconStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "5px",
-};
-
-const burgerLineStyle = {
-  width: "25px",
-  height: "3px",
-  background: colors.textColor,
-  borderRadius: "2px",
-};
-
-const mobileMenuStyle = {
-  position: "absolute",
-  top: "100%",
-  right: "1rem",
-  background: colors.background,
-  border: `2px solid ${colors.borderColor}`,
-  borderRadius: "8px",
-  padding: "1rem",
-  display: "flex",
-  flexDirection: "column",
-  gap: "1rem",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-  minWidth: "200px",
-  marginTop: "0.5rem",
-};
-
-const mobileMenuLinkStyle = {
-  fontSize: "1rem",
-  color: colors.textColor,
-  textDecoration: "none",
-  padding: "0.5rem",
-};
-
-const mobileSignupButtonStyle = {
-  fontSize: "1rem",
-  color: colors.buttonText,
-  textDecoration: "none",
-  background: colors.primary,
-  padding: "0.6rem 1rem",
-  borderRadius: "6px",
-  textAlign: "center",
-};
 
 const mainStyle = {
   padding: "3rem 2rem",
@@ -395,8 +252,18 @@ const ruleItemStyle = {
   fontSize: "1rem",
   color: colors.textColor,
   lineHeight: 1.7,
-  paddingLeft: "1.5rem",
-  position: "relative",
+  display: "flex",
+  gap: "0.75rem",
+  alignItems: "flex-start",
+};
+
+const ruleDotStyle = {
+  flexShrink: 0,
+  marginTop: "0.55rem",
+  width: "8px",
+  height: "8px",
+  borderRadius: "50%",
+  background: colors.primary,
 };
 
 const exampleSectionStyle = {
@@ -430,8 +297,8 @@ const exampleTableStyle = {
 
 const exampleRowStyle = {
   display: "grid",
-  gridTemplateColumns: "2fr 1fr 1fr 2fr",
-  gap: "1rem",
+  gridTemplateColumns: "2fr 1.5fr 1.5fr",
+  gap: "0.5rem 1rem",
   padding: "0.75rem 1rem",
   background: "#F8F8F8",
   borderRadius: "6px",
@@ -444,17 +311,20 @@ const exampleMatchStyle = {
   color: colors.textColor,
 };
 
-const exampleConfidenceStyle = {
-  color: colors.primary,
-  fontWeight: 600,
+const exampleFormulaStyle = {
+  color: colors.textColor,
+  opacity: 0.75,
+  fontSize: "0.85rem",
 };
 
-const exampleMultiplierStyle = {
-  opacity: 0.7,
+const exampleCorrectStyle = {
+  fontWeight: 700,
+  color: "#22a05a",
 };
 
-const exampleResultStyle = {
-  fontWeight: 600,
+const exampleWrongStyle = {
+  fontWeight: 700,
+  color: "#e03535",
 };
 
 const exampleTotalStyle = {

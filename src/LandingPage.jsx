@@ -1,65 +1,12 @@
-import { useState } from 'react';
 import colors from './theme';
 import logo from './assets/images/main_logo.png';
-import small_logo from './assets/images/small_logo.png';
+import PublicNav from './PublicNav';
 
 export default function LandingPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
     <div style={pageStyle}>
-      {/* Navigation */}
-      <nav style={navStyle}>
-        <div style={navContainerStyle}>
-          {/* Small Logo */}
-          <a href="/" style={logoLinkStyle}>
-            <img src={small_logo} alt="WrestleGuess" style={smallLogoStyle} />
-          </a>
+      <PublicNav />
 
-          {/* Desktop Navigation */}
-          <div style={navLinksStyle} className="desktop-menu">
-            <a href="/how-to-play" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              How to Play
-            </a>
-            <a href="/leaderboard" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              Leaderboard
-            </a>
-            <a href="/login" style={navLinkStyle} onMouseEnter={(e) => e.target.style.color = colors.primary} onMouseLeave={(e) => e.target.style.color = colors.textColor}>
-              Login
-            </a>
-            <a href="/login" style={signupButtonStyle} onMouseEnter={(e) => {
-              e.target.style.background = colors.buttonGradientEnd;
-              e.target.style.transform = "translateY(-1px)";
-              e.target.style.boxShadow = `0 6px 16px ${colors.primary}60`;
-            }} onMouseLeave={(e) => {
-              e.target.style.background = colors.primary;
-              e.target.style.transform = "translateY(0)";
-              e.target.style.boxShadow = "none";
-            }}>
-              Sign Up
-            </a>
-          </div>
-
-          {/* Mobile Burger Menu */}
-          <button onClick={() => setMenuOpen(!menuOpen)} style={burgerButtonStyle} className="burger-menu">
-            <div style={burgerIconStyle}>
-              <span style={burgerLineStyle} />
-              <span style={burgerLineStyle} />
-              <span style={burgerLineStyle} />
-            </div>
-          </button>
-
-          {/* Mobile Menu Dropdown */}
-          {menuOpen && (
-            <div style={mobileMenuStyle} className="mobile-menu">
-              <a href="/how-to-play" style={mobileMenuLinkStyle}>How to Play</a>
-              <a href="/leaderboard" style={mobileMenuLinkStyle}>Leaderboard</a>
-              <a href="/login" style={mobileMenuLinkStyle}>Login</a>
-              <a href="/login" style={mobileSignupButtonStyle}>Sign Up</a>
-            </div>
-          )}
-        </div>
-      </nav>
 
       {/* Hero Section */}
       <main style={heroStyle}>
@@ -151,119 +98,6 @@ const pageStyle = {
   fontFamily: '"Roboto", sans-serif',
 };
 
-const navStyle = {
-  background: colors.background,
-  borderBottom: `1px solid ${colors.borderColor}`,
-  position: "sticky",
-  top: 0,
-  zIndex: 1000,
-  boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-};
-
-const navContainerStyle = {
-  maxWidth: "1200px",
-  margin: "0 auto",
-  padding: "1rem 2rem",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  position: "relative",
-};
-
-const logoLinkStyle = {
-  display: "flex",
-  alignItems: "center",
-  textDecoration: "none",
-};
-
-const smallLogoStyle = {
-  height: "40px",
-  width: "auto",
-};
-
-const navLinksStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "2rem",
-};
-
-const navLinkStyle = {
-  fontFamily: '"Roboto", sans-serif',
-  fontSize: "1rem",
-  fontWeight: 500,
-  color: colors.textColor,
-  textDecoration: "none",
-  transition: "color 0.2s ease",
-};
-
-const signupButtonStyle = {
-  fontFamily: '"Roboto", sans-serif',
-  fontSize: "0.95rem",
-  fontWeight: 600,
-  color: colors.buttonText,
-  textDecoration: "none",
-  background: colors.primary,
-  padding: "0.6rem 1.5rem",
-  borderRadius: "6px",
-  transition: "all 0.2s ease",
-};
-
-const burgerButtonStyle = {
-  display: "none",
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  padding: "0.5rem",
-};
-
-const burgerIconStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "5px",
-};
-
-const burgerLineStyle = {
-  width: "25px",
-  height: "3px",
-  background: colors.textColor,
-  borderRadius: "2px",
-  transition: "all 0.3s ease",
-};
-
-const mobileMenuStyle = {
-  position: "absolute",
-  top: "100%",
-  right: "1rem",
-  background: colors.background,
-  border: `2px solid ${colors.borderColor}`,
-  borderRadius: "8px",
-  padding: "1rem",
-  display: "flex",
-  flexDirection: "column",
-  gap: "1rem",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-  minWidth: "200px",
-  marginTop: "0.5rem",
-};
-
-const mobileMenuLinkStyle = {
-  fontFamily: '"Roboto", sans-serif',
-  fontSize: "1rem",
-  color: colors.textColor,
-  textDecoration: "none",
-  padding: "0.5rem",
-};
-
-const mobileSignupButtonStyle = {
-  fontFamily: '"Roboto", sans-serif',
-  fontSize: "1rem",
-  color: colors.buttonText,
-  textDecoration: "none",
-  background: colors.primary,
-  padding: "0.6rem 1rem",
-  borderRadius: "6px",
-  textAlign: "center",
-};
 
 const heroStyle = {
   flex: 1,

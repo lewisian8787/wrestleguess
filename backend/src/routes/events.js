@@ -23,8 +23,8 @@ router.get('/', protect, async (req, res) => {
 
 // @route   GET /api/events/:id
 // @desc    Get event by ID
-// @access  Private
-router.get('/:id', protect, async (req, res) => {
+// @access  Public
+router.get('/:id', async (req, res) => {
   try {
     const event = await eventRepository.findEventById(req.params.id, true);
 
@@ -127,10 +127,10 @@ router.post('/:id/score', protect, admin, async (req, res) => {
       return res.status(400).json({ message: 'Event has already been scored' });
     }
 
-    // Ensure all matches have winners
-    const allMatchesHaveWinners = event.matches.every(m => m.winner);
-    if (!allMatchesHaveWinners) {
-      return res.status(400).json({ message: 'All matches must have winners before scoring' });
+    // Ensure all matches have a result set (winner name or NO_CONTEST)
+    const allMatchesHaveResults = event.matches.every(m => m.winner);
+    if (!allMatchesHaveResults) {
+      return res.status(400).json({ message: 'All matches must have a result set before scoring' });
     }
 
     // Get all picks for this event
@@ -161,13 +161,19 @@ router.post('/:id/score', protect, admin, async (req, res) => {
       };
     }
 
-    // Update all league standings
+    // Write scores to picks table
+    for (const pick of picks) {
+      const scoreData = userScores[pick.userId];
+      if (scoreData) {
+        await pickRepository.updatePickScore(pick.id, scoreData.points, scoreData.correctPicks);
+      }
+    }
+
+    // Also update legacy league standings (kept for backward compatibility)
     for (const [userId, scoreData] of Object.entries(userScores)) {
-      // Get all leagues for this user from PostgreSQL
       const userLeagues = await leagueRepository.getUserLeagues(userId);
 
       for (const league of userLeagues) {
-        // Update event score in PostgreSQL
         const eventScoreData = {
           points: scoreData.points,
           correctPicks: scoreData.correctPicks,
@@ -198,6 +204,27 @@ router.post('/:id/score', protect, admin, async (req, res) => {
   } catch (error) {
     console.error('Score event error:', error);
     res.status(500).json({ message: 'Server error scoring event' });
+  }
+});
+
+// @route   GET /api/events/:id/scores
+// @desc    Get top 5 scorers for a scored event
+// @access  Public
+router.get('/:id/scores', async (req, res) => {
+  try {
+    const scores = await eventRepository.getEventTopScorers(req.params.id, 5);
+
+    res.json({
+      scores: scores.map(row => ({
+        userId: row.user_id,
+        displayName: row.display_name,
+        pointsEarned: parseFloat(row.points_earned),
+        correctPicks: parseInt(row.correct_picks)
+      }))
+    });
+  } catch (error) {
+    console.error('Get event scores error:', error);
+    res.status(500).json({ message: 'Server error fetching event scores' });
   }
 });
 

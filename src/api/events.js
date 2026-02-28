@@ -29,3 +29,8 @@ export async function scoreEvent(eventId) {
   const data = await api.post(`/api/events/${eventId}/score`);
   return data;
 }
+
+export async function getEventScores(eventId) {
+  const data = await api.get(`/api/events/${eventId}/scores`);
+  return data.scores;
+}

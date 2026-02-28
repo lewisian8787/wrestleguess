@@ -196,6 +196,21 @@ export async function deletePickByEventAndUser(eventId, userId) {
 }
 
 /**
+ * Update points_earned and correct_picks for a scored pick
+ * @param {string} pickId - Pick UUID
+ * @param {number} pointsEarned - Points earned
+ * @param {number} correctPicksCount - Number of correct picks
+ * @returns {Promise<void>}
+ */
+export async function updatePickScore(pickId, pointsEarned, correctPicksCount) {
+  await query(`
+    UPDATE picks
+    SET points_earned = $2, correct_picks = $3, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1
+  `, [pickId, pointsEarned, correctPicksCount]);
+}
+
+/**
  * Delete a pick by ID (CASCADE deletes pick_choices)
  * @param {string} pickId - Pick UUID
  * @returns {Promise<void>}

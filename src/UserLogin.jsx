@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { register, login } from "./api/auth.js";
+import { useAuth } from "./auth.jsx";
 import colors from "./theme";
-import logo from "./assets/images/main_logo.png";
+import PublicNav from "./PublicNav";
 
 export default function UserLogin() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [mode, setMode] = useState("login"); // "login" or "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +31,8 @@ export default function UserLogin() {
     setStatus("Creating account...");
 
     try {
-      await register({ email, password, displayName: displayName.trim() });
+      const data = await register({ email, password, displayName: displayName.trim() });
+      setUser(data.user);
       setStatus("Account created! Redirecting...");
       setTimeout(() => {
         navigate("/home");
@@ -56,7 +59,8 @@ export default function UserLogin() {
     setStatus("Logging in...");
 
     try {
-      await login({ email, password });
+      const data = await login({ email, password });
+      setUser(data.user);
       setStatus("Login successful! Redirecting...");
       setTimeout(() => {
         navigate("/home");
@@ -73,144 +77,139 @@ export default function UserLogin() {
   }
 
   return (
-    <div style={screenStyle}>
-      <div style={containerStyle}>
-        {/* Logo */}
-        <a href="/" style={{ textDecoration: "none", marginBottom: "2rem" }}>
-          <img
-            src={logo}
-            alt="WrestleGuess"
-            style={logoStyle}
-          />
-        </a>
+    <div style={pageStyle}>
+      <PublicNav showLoginButton={false} />
 
-        {/* Mode Toggle */}
-        <div style={modeToggleContainer}>
-          <button
-            onClick={() => setMode("login")}
-            style={{
-              ...modeToggleButton,
-              ...(mode === "login" ? modeToggleButtonActive : {}),
-            }}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => setMode("signup")}
-            style={{
-              ...modeToggleButton,
-              ...(mode === "signup" ? modeToggleButtonActive : {}),
-            }}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        {/* Forms */}
-        {mode === "signup" ? (
-          <form onSubmit={handleSignup} style={formStyle}>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Display Name</label>
-              <input
-                type="text"
-                placeholder="Your name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                style={inputStyle}
-                disabled={loading}
-                required
-              />
-            </div>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Email</label>
-              <input
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={inputStyle}
-                disabled={loading}
-                required
-              />
-            </div>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Password</label>
-              <input
-                type="password"
-                placeholder="Min 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={inputStyle}
-                disabled={loading}
-                required
-              />
-            </div>
-            <button style={buttonStyle} disabled={loading}>
-              {loading ? "Creating Account..." : "Create Account"}
+      <div style={screenStyle}>
+        <div style={containerStyle}>
+          {/* Mode Toggle */}
+          <div style={modeToggleContainer}>
+            <button
+              onClick={() => setMode("login")}
+              style={{ ...modeToggleButton, ...(mode === "login" ? modeToggleButtonActive : {}) }}
+            >
+              Login
             </button>
-          </form>
-        ) : (
-          <form onSubmit={handleLogin} style={formStyle}>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Email</label>
-              <input
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={inputStyle}
-                disabled={loading}
-                required
-              />
-            </div>
-            <div style={fieldGroup}>
-              <label style={labelStyle}>Password</label>
-              <input
-                type="password"
-                placeholder="Your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={inputStyle}
-                disabled={loading}
-                required
-              />
-            </div>
-            <button style={buttonStyle} disabled={loading}>
-              {loading ? "Logging In..." : "Log In"}
+            <button
+              onClick={() => setMode("signup")}
+              style={{ ...modeToggleButton, ...(mode === "signup" ? modeToggleButtonActive : {}) }}
+            >
+              Sign Up
             </button>
-          </form>
-        )}
-
-        {status && (
-          <div style={statusStyle}>
-            {status}
           </div>
-        )}
 
-        {/* Footer */}
-        <div style={footerStyle}>
-          <p style={{ margin: "0.5rem 0", opacity: 0.6 }}>
-            Free Forever • No Betting • Just For Fun
-          </p>
-          <p style={{ margin: "0.5rem 0", fontSize: "0.75rem", opacity: 0.5 }}>
-            © 2024 WrestleGuess. All rights reserved.
-          </p>
+          {/* Forms */}
+          {mode === "signup" ? (
+            <form onSubmit={handleSignup} style={formStyle}>
+              <div style={fieldGroup}>
+                <label style={labelStyle}>Display Name</label>
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  style={inputStyle}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <div style={fieldGroup}>
+                <label style={labelStyle}>Email</label>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={inputStyle}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <div style={fieldGroup}>
+                <label style={labelStyle}>Password</label>
+                <input
+                  type="password"
+                  placeholder="Min 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={inputStyle}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <button style={buttonStyle} disabled={loading}>
+                {loading ? "Creating Account..." : "Create Account"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} style={formStyle}>
+              <div style={fieldGroup}>
+                <label style={labelStyle}>Email</label>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={inputStyle}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <div style={fieldGroup}>
+                <label style={labelStyle}>Password</label>
+                <input
+                  type="password"
+                  placeholder="Your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={inputStyle}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <button style={buttonStyle} disabled={loading}>
+                {loading ? "Logging In..." : "Log In"}
+              </button>
+            </form>
+          )}
+
+          {status && (
+            <div style={statusStyle}>
+              {status}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div style={footerStyle}>
+            <p style={{ margin: "0.5rem 0", opacity: 0.6 }}>
+              Free Forever • No Betting • Just For Fun
+            </p>
+            <p style={{ margin: "0.5rem 0", fontSize: "0.75rem", opacity: 0.5 }}>
+              © 2025 WrestleGuess. All rights reserved.
+            </p>
+          </div>
+
+          <a href="/" style={backLinkStyle}>
+            ← Back to Home
+          </a>
         </div>
-
-        {/* Back to Landing */}
-        <a href="/" style={backLinkStyle}>
-          ← Back to Home
-        </a>
       </div>
     </div>
   );
 }
 
 /* ----- Styles ----- */
-const screenStyle = {
+const pageStyle = {
   minHeight: "100vh",
   background: "#F8F8F8",
   fontFamily: '"Roboto", sans-serif',
+  display: "flex",
+  flexDirection: "column",
+};
+
+
+const screenStyle = {
+  flex: 1,
   padding: "2rem 1rem",
   display: "flex",
   alignItems: "center",
@@ -228,13 +227,6 @@ const containerStyle = {
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-};
-
-const logoStyle = {
-  maxWidth: "280px",
-  width: "100%",
-  height: "auto",
-  display: "block",
 };
 
 const modeToggleContainer = {

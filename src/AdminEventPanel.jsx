@@ -857,6 +857,7 @@ export default function AdminEventPanel() {
                               {name}
                             </option>
                           ))}
+                          <option value="NO_CONTEST">— No Contest / Double DQ —</option>
                         </select>
                       </div>
                     ))}

@@ -71,6 +71,38 @@ export async function verifyPassword(userId, candidatePassword) {
   return await comparePassword(candidatePassword, user.password);
 }
 
+export async function getUserStats(userId) {
+  const result = await query(`
+    SELECT id, display_name, total_score, events_played,
+           COALESCE(avg_per_event, 0) as avg_per_event, global_rank
+    FROM (
+      SELECT u.id, u.display_name,
+        COALESCE(SUM(p.points_earned), 0) as total_score,
+        COUNT(p.id) as events_played,
+        COALESCE(AVG(p.points_earned), 0) as avg_per_event,
+        RANK() OVER (ORDER BY COALESCE(SUM(p.points_earned), 0) DESC) as global_rank
+      FROM users u
+      LEFT JOIN picks p ON p.user_id = u.id AND p.points_earned IS NOT NULL
+      GROUP BY u.id, u.display_name
+    ) ranked
+    WHERE id = $1
+  `, [userId]);
+  return result.rows[0] || null;
+}
+
+export async function getUserHistory(userId) {
+  const result = await query(`
+    SELECT e.id as event_id, e.name as event_name, e.brand, e.date,
+           p.points_earned, p.correct_picks,
+           (SELECT COUNT(*) FROM matches m WHERE m.event_id = e.id) as total_matches
+    FROM picks p
+    JOIN events e ON e.id = p.event_id
+    WHERE p.user_id = $1 AND p.points_earned IS NOT NULL
+    ORDER BY e.date DESC
+  `, [userId]);
+  return result.rows;
+}
+
 export function toPublicJSON(user) {
   return {
     id: user.id,
