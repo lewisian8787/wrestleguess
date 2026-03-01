@@ -84,13 +84,13 @@ router.post('/login', authLimiter,
       const user = await userRepository.findUserByEmail(email, true);
 
       if (!user) {
-        return res.status(401).json({ message: 'Invalid email or password' });
+        return res.status(401).json({ message: 'No account found with that email address' });
       }
 
       // Check password
       const isMatch = await comparePassword(password, user.password);
       if (!isMatch) {
-        return res.status(401).json({ message: 'Invalid email or password' });
+        return res.status(401).json({ message: 'Incorrect password' });
       }
 
       // Generate token

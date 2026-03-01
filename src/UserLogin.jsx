@@ -13,6 +13,7 @@ export default function UserLogin() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [status, setStatus] = useState("");
+  const [statusType, setStatusType] = useState("info"); // "info" | "error" | "success"
   const [loading, setLoading] = useState(false);
 
   async function handleSignup(e) {
@@ -33,16 +34,18 @@ export default function UserLogin() {
     try {
       const data = await register({ email, password, displayName: displayName.trim() });
       setUser(data.user);
+      setStatusType("success");
       setStatus("Account created! Redirecting...");
       setTimeout(() => {
         navigate("/home");
       }, 1000);
     } catch (err) {
       console.error(err);
+      setStatusType("error");
       if (err.message.includes("already exists")) {
-        setStatus("Email already in use. Try logging in instead.");
+        setStatus("An account with that email already exists. Try logging in instead.");
       } else {
-        setStatus("Error: " + err.message);
+        setStatus(err.message);
       }
       setLoading(false);
     }
@@ -61,17 +64,15 @@ export default function UserLogin() {
     try {
       const data = await login({ email, password });
       setUser(data.user);
+      setStatusType("success");
       setStatus("Login successful! Redirecting...");
       setTimeout(() => {
         navigate("/home");
       }, 500);
     } catch (err) {
       console.error(err);
-      if (err.message.includes("Invalid")) {
-        setStatus("Invalid email or password");
-      } else {
-        setStatus("Error: " + err.message);
-      }
+      setStatusType("error");
+      setStatus(err.message);
       setLoading(false);
     }
   }
@@ -174,18 +175,15 @@ export default function UserLogin() {
           )}
 
           {status && (
-            <div style={statusStyle}>
+            <div style={statusStyle(statusType)}>
               {status}
             </div>
           )}
 
           {/* Footer */}
           <div style={footerStyle}>
-            <p style={{ margin: "0.5rem 0", opacity: 0.6 }}>
-              Free Forever • No Betting • Just For Fun
-            </p>
             <p style={{ margin: "0.5rem 0", fontSize: "0.75rem", opacity: 0.5 }}>
-              © 2025 WrestleGuess. All rights reserved.
+              © 2026 WrestleGuess. All rights reserved.
             </p>
           </div>
 
@@ -310,18 +308,23 @@ const buttonStyle = {
   fontFamily: '"Roboto", sans-serif',
 };
 
-const statusStyle = {
-  width: "100%",
-  textAlign: "center",
-  fontSize: "0.9rem",
-  padding: "0.85rem",
-  background: "#F8F8F8",
-  border: `1px solid ${colors.borderColor}`,
-  borderRadius: "8px",
-  lineHeight: 1.5,
-  color: colors.textColor,
-  marginBottom: "1rem",
-};
+function statusStyle(type) {
+  const variants = {
+    error:   { background: "#FFF0F0", border: "1px solid #F5C6C6", color: "#C0392B" },
+    success: { background: "#F0FFF4", border: "1px solid #A8E6BC", color: "#1E7E34" },
+    info:    { background: "#F8F8F8", border: `1px solid ${colors.borderColor}`, color: colors.textColor },
+  };
+  return {
+    width: "100%",
+    textAlign: "center",
+    fontSize: "0.9rem",
+    padding: "0.85rem",
+    borderRadius: "8px",
+    lineHeight: 1.5,
+    marginBottom: "1rem",
+    ...variants[type] ?? variants.info,
+  };
+}
 
 const footerStyle = {
   textAlign: "center",

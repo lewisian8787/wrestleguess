@@ -51,9 +51,12 @@ async function request(endpoint, options = {}) {
   });
 
   if (response.status === 401) {
-    clearAuth();
-    window.location.href = '/login';
-    throw new Error('Session expired');
+    // Auth endpoints (login/register) handle their own 401s — don't hijack them
+    if (!endpoint.startsWith('/api/auth/')) {
+      clearAuth();
+      window.location.href = '/login';
+      throw new Error('Session expired');
+    }
   }
 
   const data = await response.json();

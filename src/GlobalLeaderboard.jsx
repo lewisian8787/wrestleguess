@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getGlobalLeaderboard } from "./api/users.js";
 import { useAuth } from "./auth.jsx";
 import NavBar from "./NavBar";
@@ -27,6 +27,7 @@ const PAGE_SIZE = 20;
 
 export default function GlobalLeaderboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [leaderboard, setLeaderboard] = useState([]);
   const [season, setSeason]           = useState(null);
   const [loading, setLoading]         = useState(true);
@@ -87,6 +88,7 @@ export default function GlobalLeaderboard() {
 
       <main style={mainStyle}>
         <div style={containerStyle}>
+          <button onClick={() => navigate(-1)} style={backButtonStyle}>← Back</button>
           <h1 style={titleStyle}>Global Leaderboard</h1>
 
           {/* Season Roadmap */}
@@ -644,6 +646,20 @@ const pageIndicatorStyle = {
   color: colors.textColor,
   opacity: 0.6,
   padding: "0 0.4rem",
+};
+
+const backButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  fontSize: "0.9rem",
+  fontWeight: 600,
+  color: colors.textColor,
+  opacity: 0.55,
+  padding: "0 0 1.25rem",
+  fontFamily: '"Roboto", sans-serif',
 };
 
 const arrowInactiveStyle = {
