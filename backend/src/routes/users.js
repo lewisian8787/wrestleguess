@@ -3,6 +3,7 @@ import * as userRepository from '../repositories/userRepository.js';
 import * as leagueRepository from '../repositories/leagueRepository.js';
 import * as followRepository from '../repositories/followRepository.js';
 import { protect } from '../middleware/auth.js';
+import { query } from '../config/postgres.js';
 
 const router = express.Router();
 
@@ -11,7 +12,14 @@ const router = express.Router();
 // @access  Public
 router.get('/leaderboard', async (req, res) => {
   try {
-    const leaderboard = await leagueRepository.getGlobalLeaderboard(100);
+    const [leaderboard, seasonResult, upcomingResult] = await Promise.all([
+      leagueRepository.getGlobalLeaderboard(500),
+      query(`SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE scored = true) as scored FROM events`),
+      query(`SELECT id, name, brand, date FROM events WHERE scored = false ORDER BY date ASC LIMIT 2`),
+    ]);
+
+    const totalEvents  = parseInt(seasonResult.rows[0].total);
+    const scoredEvents = parseInt(seasonResult.rows[0].scored);
 
     res.json({
       leaderboard: leaderboard.map(entry => ({
@@ -19,7 +27,19 @@ router.get('/leaderboard', async (req, res) => {
         displayName: entry.displayName,
         totalScore: parseFloat(entry.totalScore),
         eventsPlayed: parseInt(entry.eventsPlayed)
-      }))
+      })),
+      season: {
+        totalEvents,
+        scoredEvents,
+        remainingEvents: totalEvents - scoredEvents,
+        finalEvent: 'WrestleMania 42',
+        upcoming: upcomingResult.rows.map(e => ({
+          id: e.id,
+          name: e.name,
+          brand: e.brand,
+          date: e.date,
+        })),
+      },
     });
   } catch (error) {
     console.error('Get leaderboard error:', error);

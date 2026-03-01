@@ -7,7 +7,7 @@ export async function getUserProfile() {
 
 export async function getGlobalLeaderboard() {
   const data = await api.get('/api/users/leaderboard');
-  return data.leaderboard;
+  return { leaderboard: data.leaderboard, season: data.season };
 }
 
 export async function getUserStats() {
