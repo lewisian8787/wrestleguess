@@ -3,12 +3,14 @@ import { up as migration001 } from './migrations/001_initial_schema.js';
 import { up as migration003 } from './migrations/003_add_events_and_picks.js';
 import { up as migration004 } from './migrations/004_add_scoring_to_picks.js';
 import { up as migration005 } from './migrations/005_add_follows.js';
+import { up as migration006 } from './migrations/006_add_password_reset.js';
 
 const migrations = [
   { id: '001_initial_schema', run: migration001 },
   { id: '003_add_events_and_picks', run: migration003 },
   { id: '004_add_scoring_to_picks', run: migration004 },
   { id: '005_add_follows', run: migration005 },
+  { id: '006_add_password_reset', run: migration006 },
 ];
 
 export async function runMigrations() {
