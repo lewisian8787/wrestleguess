@@ -21,11 +21,11 @@ export default function EventsListPage() {
         // Fetch all events
         const eventsList = await getEvents();
 
-        // Sort by date (most recent first)
+        // Sort by date (soonest first for upcoming events)
         eventsList.sort((a, b) => {
           const dateA = new Date(a.date);
           const dateB = new Date(b.date);
-          return dateB - dateA;
+          return dateA - dateB;
         });
 
         setEvents(eventsList);
@@ -132,7 +132,9 @@ export default function EventsListPage() {
                       }}
                       disabled={isLocked && !hasPicked}
                     >
-                      {hasPicked ? "View/Edit Picks" : "Make Picks"}
+                      {hasPicked
+                        ? (isLocked || isScored ? "View Picks" : "Edit Picks")
+                        : "Make Picks"}
                     </button>
                   </div>
                 );

@@ -113,22 +113,22 @@ export default function NavBar() {
       {/* Mobile Dropdown Menu */}
       {menuOpen && (
         <div style={mobileMenuStyle} className="mobile-menu">
-          <a href="/home" style={mobileMenuLinkStyle}>
+          <a href="/home" style={mobileMenuLinkStyle} onClick={() => setMenuOpen(false)}>
             Home
           </a>
-          <a href="/events" style={mobileMenuLinkStyle}>
+          <a href="/events" style={mobileMenuLinkStyle} onClick={() => setMenuOpen(false)}>
             Events
           </a>
-          <a href="/how-to-play" style={mobileMenuLinkStyle}>
+          <a href="/how-to-play" style={mobileMenuLinkStyle} onClick={() => setMenuOpen(false)}>
             How to Play
           </a>
-          <a href="/rules" style={mobileMenuLinkStyle}>
+          <a href="/rules" style={mobileMenuLinkStyle} onClick={() => setMenuOpen(false)}>
             Rules
           </a>
-          <a href="/leaderboard" style={mobileMenuLinkStyle}>
+          <a href="/leaderboard" style={mobileMenuLinkStyle} onClick={() => setMenuOpen(false)}>
             Leaderboard
           </a>
-          <a href="/settings" style={mobileMenuLinkStyle}>
+          <a href="/settings" style={mobileMenuLinkStyle} onClick={() => setMenuOpen(false)}>
             Settings
           </a>
           <div style={mobileUserInfoStyle}>

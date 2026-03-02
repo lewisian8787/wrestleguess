@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { register, login } from "./api/auth.js";
 import { useAuth } from "./auth.jsx";
 import colors from "./theme";
@@ -7,6 +7,8 @@ import PublicNav from "./PublicNav";
 
 export default function UserLogin() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("expired") === "1";
   const { setUser } = useAuth();
   const [mode, setMode] = useState("login"); // "login" or "signup"
   const [email, setEmail] = useState("");
@@ -83,6 +85,12 @@ export default function UserLogin() {
 
       <div style={screenStyle}>
         <div style={containerStyle}>
+          {sessionExpired && (
+            <div style={statusStyle("error")}>
+              Your session has expired. Please log in again.
+            </div>
+          )}
+
           {/* Mode Toggle */}
           <div style={modeToggleContainer}>
             <button

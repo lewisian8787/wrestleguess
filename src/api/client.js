@@ -54,7 +54,7 @@ async function request(endpoint, options = {}) {
     // Auth endpoints (login/register) handle their own 401s — don't hijack them
     if (!endpoint.startsWith('/api/auth/')) {
       clearAuth();
-      window.location.href = '/login';
+      window.location.href = '/login?expired=1';
       throw new Error('Session expired');
     }
   }
