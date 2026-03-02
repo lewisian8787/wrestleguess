@@ -20,14 +20,39 @@ const steps = [
   {
     title: "Pick Your Winners",
     desc: "Before each event locks, submit your predictions for every match on the card.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+        <polyline points="9 16 11 18 15 14"/>
+      </svg>
+    ),
   },
   {
     title: "Watch It Play Out",
     desc: "Tune in and see how your picks hold up as the action unfolds live.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+    ),
   },
   {
     title: "Earn Points & Climb",
     desc: "Score points for every correct pick and rise through the global leaderboard.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 9H4a2 2 0 0 1-2-2V5h4"/>
+        <path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/>
+        <path d="M6 5h12v5a6 6 0 0 1-12 0z"/>
+        <line x1="12" y1="16" x2="12" y2="20"/>
+        <line x1="8" y1="20" x2="16" y2="20"/>
+      </svg>
+    ),
   },
 ];
 
@@ -56,6 +81,18 @@ export default function LandingPage() {
 
       {/* ── Hero ── */}
       <section style={heroStyle}>
+        {/* Background ring silhouette */}
+        <svg aria-hidden="true" style={heroRingSvgStyle} viewBox="0 0 400 400">
+          <rect x="12" y="12" width="376" height="376" fill="none" stroke={colors.primary} strokeWidth="7" rx="4"/>
+          <rect x="52" y="52" width="296" height="296" fill="none" stroke={colors.primary} strokeWidth="3.5"/>
+          <rect x="82" y="82" width="236" height="236" fill="none" stroke={colors.primary} strokeWidth="3"/>
+          <rect x="112" y="112" width="176" height="176" fill="none" stroke={colors.primary} strokeWidth="2.5"/>
+          <circle cx="52"  cy="52"  r="9" fill={colors.primary}/>
+          <circle cx="348" cy="52"  r="9" fill={colors.primary}/>
+          <circle cx="52"  cy="348" r="9" fill={colors.primary}/>
+          <circle cx="348" cy="348" r="9" fill={colors.primary}/>
+        </svg>
+
         <div style={heroContentStyle}>
           <h1 style={heroHeadlineStyle}>
             Think you know wrestling?<br />Prove it.
@@ -77,7 +114,7 @@ export default function LandingPage() {
           <div style={stepsRowStyle}>
             {steps.map((step, i) => (
               <div key={i} style={stepCardStyle}>
-                <div style={stepNumberStyle}>{i + 1}</div>
+                <div style={stepIconStyle}>{step.icon}</div>
                 <h3 style={stepTitleStyle}>{step.title}</h3>
                 <p style={stepDescStyle}>{step.desc}</p>
               </div>
@@ -166,12 +203,27 @@ const heroStyle = {
   justifyContent: "center",
   padding: "4rem 1.5rem 5rem",
   background: colors.background,
+  position: "relative",
+  overflow: "hidden",
+};
+
+const heroRingSvgStyle = {
+  position: "absolute",
+  right: "-8%",
+  top: "50%",
+  transform: "translateY(-50%) rotate(12deg)",
+  width: "min(520px, 85vw)",
+  height: "min(520px, 85vw)",
+  opacity: 0.055,
+  pointerEvents: "none",
 };
 
 const heroContentStyle = {
   textAlign: "center",
   maxWidth: "680px",
   width: "100%",
+  position: "relative",
+  zIndex: 1,
 };
 
 
@@ -270,17 +322,15 @@ const stepCardStyle = {
   boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
 };
 
-const stepNumberStyle = {
+const stepIconStyle = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: "44px",
-  height: "44px",
-  borderRadius: "50%",
-  background: colors.primary,
-  color: "#fff",
-  fontFamily: '"Bebas Neue", sans-serif',
-  fontSize: "1.4rem",
+  width: "56px",
+  height: "56px",
+  borderRadius: "14px",
+  background: `${colors.primary}18`,
+  color: colors.primary,
   marginBottom: "1rem",
 };
 
@@ -364,6 +414,8 @@ const picksCTAStyle = {
 
 const leaderboardSectionStyle = {
   background: colors.highlight,
+  backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
+  backgroundSize: "22px 22px",
   padding: "4rem 1.5rem",
 };
 

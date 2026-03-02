@@ -19,6 +19,9 @@ const EventsListPage = lazy(() => import("./EventsListPage.jsx"));
 const PickEventPage = lazy(() => import("./PickEventPage.jsx"));
 const AdminLogin = lazy(() => import("./AdminLogin.jsx"));
 const AdminEventPanel = lazy(() => import("./AdminEventPanel.jsx"));
+const ForgotPassword = lazy(() => import("./ForgotPassword.jsx"));
+const ResetPassword = lazy(() => import("./ResetPassword.jsx"));
+const ProfileSettings = lazy(() => import("./ProfileSettings.jsx"));
 const NotFound = lazy(() => import("./NotFound.jsx"));
 
 // Loading component
@@ -51,6 +54,9 @@ export default function App() {
         <Route path="/event/:eventId" element={<EventDetail />} />
         <Route path="/events" element={<ProtectedRoute><EventsListPage /></ProtectedRoute>} />
         <Route path="/event/:eventId/pick" element={<ProtectedRoute><PickEventPage /></ProtectedRoute>} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/event" element={<AdminEventPanel />} />
         <Route path="*" element={<NotFound />} />

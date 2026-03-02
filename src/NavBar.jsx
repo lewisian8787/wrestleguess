@@ -71,7 +71,14 @@ export default function NavBar() {
             Leaderboard
           </a>
           <div style={userMenuStyle}>
-            <span style={userNameStyle}>{displayName}</span>
+            <a
+              href="/settings"
+              style={userNameStyle}
+              onMouseEnter={(e) => e.target.style.color = colors.primary}
+              onMouseLeave={(e) => e.target.style.color = colors.textColor}
+            >
+              {displayName}
+            </a>
             <button
               onClick={handleLogout}
               style={logoutButtonStyle}
@@ -120,6 +127,9 @@ export default function NavBar() {
           </a>
           <a href="/leaderboard" style={mobileMenuLinkStyle}>
             Leaderboard
+          </a>
+          <a href="/settings" style={mobileMenuLinkStyle}>
+            Settings
           </a>
           <div style={mobileUserInfoStyle}>
             <span style={{ opacity: 0.6 }}>Logged in as</span>
@@ -212,6 +222,8 @@ const userNameStyle = {
   fontSize: "0.95rem",
   color: colors.textColor,
   fontWeight: 500,
+  textDecoration: "none",
+  transition: "color 0.2s ease",
 };
 
 const logoutButtonStyle = {

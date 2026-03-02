@@ -127,7 +127,7 @@ export default function GlobalLeaderboard() {
                           )}
                           <Link
                             to={`/event/${evt.id}`}
-                            style={{ ...eventNodeStyle, borderTop: `3px solid ${brandColor(evt.brand)}`, textDecoration: "none" }}
+                            style={{ ...eventNodeStyle, borderTopWidth: "3px", borderTopStyle: "solid", borderTopColor: brandColor(evt.brand), textDecoration: "none" }}
                           >
                             <div style={{ ...brandTagStyle, color: brandColor(evt.brand) }}>{evt.brand}</div>
                             <div style={evtNameStyle}>{evt.name}</div>
@@ -216,7 +216,7 @@ export default function GlobalLeaderboard() {
                                   to={`/user/${player.userId}`}
                                   style={playerLinkStyle}
                                   onMouseEnter={e => e.currentTarget.style.color = colors.primary}
-                                  onMouseLeave={e => e.currentTarget.style.color = colors.textColor}
+                                  onMouseLeave={e => e.currentTarget.style.color = "#fff"}
                                 >
                                   {player.displayName}
                                 </Link>
@@ -393,7 +393,9 @@ const eventNodeStyle = {
   width: "190px",
   background: "#fff",
   borderRadius: "10px",
-  border: `1px solid ${colors.borderColor}`,
+  borderRightWidth: "1px", borderRightStyle: "solid", borderRightColor: colors.borderColor,
+  borderBottomWidth: "1px", borderBottomStyle: "solid", borderBottomColor: colors.borderColor,
+  borderLeftWidth: "1px", borderLeftStyle: "solid", borderLeftColor: colors.borderColor,
   padding: "1rem 1.2rem",
   textAlign: "center",
   boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
@@ -473,10 +475,10 @@ const searchInputStyle = {
 };
 
 const tableContainerStyle = {
-  background: colors.background,
+  background: colors.highlight,
   borderRadius: "12px",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-  border: `1px solid ${colors.borderColor}`,
+  boxShadow: "0 2px 16px rgba(0,0,0,0.3)",
+  border: "1px solid rgba(255,255,255,0.10)",
   overflowX: "auto",
   WebkitOverflowScrolling: "touch",
 };
@@ -487,7 +489,7 @@ const tableStyle = {
 };
 
 const tableHeaderRowStyle = {
-  borderBottom: `2px solid ${colors.borderColor}`,
+  borderBottom: "2px solid rgba(255,255,255,0.10)",
 };
 
 /* Sticky player column — header */
@@ -495,16 +497,16 @@ const stickyHeaderCellStyle = {
   position: "sticky",
   left: 0,
   zIndex: 3,
-  background: "#FAFAFA",
+  background: "#0B132B",
   padding: "1rem 0.75rem 1rem 1.25rem",
   textAlign: "left",
   fontSize: "0.8rem",
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
-  color: colors.textColor,
+  color: "rgba(255,255,255,0.5)",
   whiteSpace: "nowrap",
-  boxShadow: "3px 0 8px -3px rgba(0,0,0,0.14)",
+  boxShadow: "3px 0 8px -3px rgba(0,0,0,0.4)",
 };
 
 /* Scrollable stat column headers */
@@ -515,8 +517,7 @@ const scrollHeaderCellStyle = {
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
-  color: colors.textColor,
-  opacity: 0.7,
+  color: "rgba(255,255,255,0.4)",
   whiteSpace: "nowrap",
 };
 
@@ -526,7 +527,7 @@ const sortableHeaderStyle = {
 };
 
 const tableRowStyle = {
-  borderBottom: `1px solid ${colors.borderColor}`,
+  borderBottom: "1px solid rgba(255,255,255,0.07)",
 };
 
 /* Sticky player column — body */
@@ -534,9 +535,9 @@ const stickyPlayerCellStyle = {
   position: "sticky",
   left: 0,
   zIndex: 2,
-  background: colors.background,
+  background: "#0B132B",
   padding: "0.85rem 0.75rem 0.85rem 1.25rem",
-  boxShadow: "3px 0 8px -3px rgba(0,0,0,0.14)",
+  boxShadow: "3px 0 8px -3px rgba(0,0,0,0.4)",
 };
 
 const stickyInnerStyle = {
@@ -572,8 +573,7 @@ const rankNumStyle = {
   flexShrink: 0,
   fontSize: "0.78rem",
   fontWeight: 600,
-  color: colors.textColor,
-  opacity: 0.45,
+  color: "rgba(255,255,255,0.35)",
   whiteSpace: "nowrap",
 };
 
@@ -582,7 +582,7 @@ const scrollStatCellStyle = {
   padding: "0.85rem 0.75rem",
   fontSize: "0.95rem",
   textAlign: "right",
-  color: colors.textColor,
+  color: "rgba(255,255,255,0.85)",
   whiteSpace: "nowrap",
 };
 
@@ -592,7 +592,7 @@ const pointsCellStyle = {
 };
 
 const playerLinkStyle = {
-  color: colors.textColor,
+  color: "#fff",
   textDecoration: "none",
   fontWeight: 600,
   fontSize: "0.95rem",
@@ -611,15 +611,14 @@ const paginationBarStyle = {
   alignItems: "center",
   justifyContent: "space-between",
   padding: "0.85rem 1.25rem",
-  borderTop: `1px solid ${colors.borderColor}`,
+  borderTop: "1px solid rgba(255,255,255,0.08)",
   flexWrap: "wrap",
   gap: "0.75rem",
 };
 
 const paginationInfoStyle = {
   fontSize: "0.85rem",
-  color: colors.textColor,
-  opacity: 0.5,
+  color: "rgba(255,255,255,0.4)",
 };
 
 const paginationButtonsStyle = {
@@ -633,18 +632,17 @@ function pgBtnStyle(disabled) {
     padding: "0.35rem 0.7rem",
     fontSize: "0.85rem",
     fontWeight: 600,
-    border: `1px solid ${colors.borderColor}`,
+    border: "1px solid rgba(255,255,255,0.15)",
     borderRadius: "6px",
-    background: colors.background,
-    color: disabled ? colors.borderColor : colors.textColor,
+    background: "rgba(255,255,255,0.07)",
+    color: disabled ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.75)",
     cursor: disabled ? "default" : "pointer",
   };
 }
 
 const pageIndicatorStyle = {
   fontSize: "0.85rem",
-  color: colors.textColor,
-  opacity: 0.6,
+  color: "rgba(255,255,255,0.5)",
   padding: "0 0.4rem",
 };
 

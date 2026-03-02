@@ -1,4 +1,4 @@
-import { api } from './client.js';
+import { api, setStoredUser } from './client.js';
 
 export async function getUserProfile() {
   const data = await api.get('/api/users/profile');
@@ -38,4 +38,14 @@ export async function followUser(userId) {
 export async function unfollowUser(userId) {
   const data = await api.delete(`/api/users/follow/${userId}`);
   return data;
+}
+
+export async function updateProfile(displayName) {
+  const data = await api.put('/api/users/profile', { displayName });
+  setStoredUser(data.user);
+  return data;
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  return api.put('/api/users/password', { currentPassword, newPassword });
 }

@@ -20,6 +20,14 @@ export async function getCurrentUser() {
   return data.user;
 }
 
+export async function forgotPassword(email) {
+  return api.post('/api/auth/forgot-password', { email });
+}
+
+export async function resetPassword(token, password) {
+  return api.post('/api/auth/reset-password', { token, password });
+}
+
 export function logout() {
   clearAuth();
 }

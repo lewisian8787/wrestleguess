@@ -103,6 +103,48 @@ export async function getUserHistory(userId) {
   return result.rows;
 }
 
+export async function updateDisplayName(userId, displayName) {
+  const result = await query(
+    `UPDATE users SET display_name = $1, updated_at = NOW()
+     WHERE id = $2
+     RETURNING id, email, display_name, is_admin, created_at`,
+    [displayName.trim(), userId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function updatePassword(userId, hashedPassword) {
+  await query(
+    `UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2`,
+    [hashedPassword, userId]
+  );
+}
+
+export async function setPasswordResetToken(userId, hashedToken, expiresAt) {
+  await query(
+    `UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE id = $3`,
+    [hashedToken, expiresAt, userId]
+  );
+}
+
+export async function findUserByResetToken(hashedToken) {
+  const result = await query(
+    `SELECT id, email, display_name, is_admin, created_at
+     FROM users
+     WHERE password_reset_token = $1
+       AND password_reset_expires > NOW()`,
+    [hashedToken]
+  );
+  return result.rows[0] || null;
+}
+
+export async function clearPasswordResetToken(userId) {
+  await query(
+    `UPDATE users SET password_reset_token = NULL, password_reset_expires = NULL WHERE id = $1`,
+    [userId]
+  );
+}
+
 export function toPublicJSON(user) {
   return {
     id: user.id,

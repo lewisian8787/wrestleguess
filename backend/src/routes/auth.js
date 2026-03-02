@@ -1,16 +1,26 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
+import crypto from 'crypto';
 import * as userRepository from '../repositories/userRepository.js';
-import { comparePassword } from '../utils/password.js';
+import { comparePassword, hashPassword } from '../utils/password.js';
 import { generateToken, protect } from '../middleware/auth.js';
+import { sendPasswordResetEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 20,
   message: { message: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: 'Too many password reset attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -123,5 +133,73 @@ router.get('/me', protect, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// @route   POST /api/auth/forgot-password
+// @desc    Send password reset email
+// @access  Public
+router.post('/forgot-password', resetLimiter,
+  [body('email').isEmail().withMessage('Please provide a valid email')],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      // Always respond generically — don't reveal whether the email exists
+      const { email } = req.body;
+      const user = await userRepository.findUserByEmail(email);
+
+      if (user) {
+        const plainToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(plainToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        await userRepository.setPasswordResetToken(user.id, hashedToken, expiresAt);
+        await sendPasswordResetEmail(email, plainToken);
+      }
+
+      res.json({ message: 'If that email is registered, a reset link has been sent.' });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: 'Server error sending reset email' });
+    }
+  }
+);
+
+// @route   POST /api/auth/reset-password
+// @desc    Reset password using token from email
+// @access  Public
+router.post('/reset-password', resetLimiter,
+  [
+    body('token').notEmpty().withMessage('Reset token is required'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { token, password } = req.body;
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+      const user = await userRepository.findUserByResetToken(hashedToken);
+      if (!user) {
+        return res.status(400).json({ message: 'Invalid or expired reset link' });
+      }
+
+      const hashedPassword = await hashPassword(password);
+      await userRepository.updatePassword(user.id, hashedPassword);
+      await userRepository.clearPasswordResetToken(user.id);
+
+      res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ message: 'Server error resetting password' });
+    }
+  }
+);
 
 export default router;

@@ -1,8 +1,10 @@
 import express from 'express';
+import { body, validationResult } from 'express-validator';
 import * as userRepository from '../repositories/userRepository.js';
 import * as leagueRepository from '../repositories/leagueRepository.js';
 import * as followRepository from '../repositories/followRepository.js';
 import { protect } from '../middleware/auth.js';
+import { comparePassword, hashPassword } from '../utils/password.js';
 import { query } from '../config/postgres.js';
 
 const router = express.Router();
@@ -46,6 +48,59 @@ router.get('/leaderboard', async (req, res) => {
     res.status(500).json({ message: 'Server error fetching leaderboard' });
   }
 });
+
+// @route   PUT /api/users/profile
+// @desc    Update current user's display name
+// @access  Private
+router.put('/profile', protect,
+  [body('displayName').trim().isLength({ min: 2, max: 50 }).withMessage('Display name must be 2–50 characters')],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const updated = await userRepository.updateDisplayName(req.user.id, req.body.displayName);
+      res.json({ message: 'Profile updated', user: userRepository.toPublicJSON(updated) });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.status(500).json({ message: 'Server error updating profile' });
+    }
+  }
+);
+
+// @route   PUT /api/users/password
+// @desc    Change current user's password
+// @access  Private
+router.put('/password', protect,
+  [
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      const user = await userRepository.findUserById(req.user.id, true);
+      const isMatch = await comparePassword(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+
+      const hashed = await hashPassword(newPassword);
+      await userRepository.updatePassword(req.user.id, hashed);
+      res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Change password error:', error);
+      res.status(500).json({ message: 'Server error changing password' });
+    }
+  }
+);
 
 // @route   GET /api/users/profile
 // @desc    Get current user's profile

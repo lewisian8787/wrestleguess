@@ -171,6 +171,7 @@ export default function UserLogin() {
               <button style={buttonStyle} disabled={loading}>
                 {loading ? "Logging In..." : "Log In"}
               </button>
+              <a href="/forgot-password" style={forgotLinkStyle}>Forgot password?</a>
             </form>
           )}
 
@@ -334,6 +335,15 @@ const footerStyle = {
   width: "100%",
   borderTop: `1px solid ${colors.borderColor}`,
   paddingTop: "1.5rem",
+};
+
+const forgotLinkStyle = {
+  textAlign: "center",
+  fontSize: "0.85rem",
+  color: colors.textColor,
+  textDecoration: "none",
+  opacity: 0.55,
+  fontWeight: 500,
 };
 
 const backLinkStyle = {
