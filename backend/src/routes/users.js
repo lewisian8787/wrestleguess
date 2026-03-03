@@ -196,6 +196,51 @@ router.delete('/follow/:userId', protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/leaderboard/monthly
+// @desc    Get monthly leaderboard for a given year and month
+// @access  Public
+router.get('/leaderboard/monthly', async (req, res) => {
+  try {
+    const now = new Date();
+    const year  = parseInt(req.query.year)  || now.getFullYear();
+    const month = parseInt(req.query.month) || (now.getMonth() + 1);
+
+    if (month < 1 || month > 12 || year < 2020 || year > 2100) {
+      return res.status(400).json({ message: 'Invalid year or month' });
+    }
+
+    const result = await query(`
+      SELECT
+        u.id as "userId",
+        u.display_name as "displayName",
+        SUM(p.points_earned) as "totalScore",
+        COUNT(p.id) as "eventsPlayed"
+      FROM users u
+      JOIN picks p ON p.user_id = u.id
+      JOIN events e ON e.id = p.event_id
+      WHERE e.scored = true
+        AND EXTRACT(YEAR FROM e.date) = $1
+        AND EXTRACT(MONTH FROM e.date) = $2
+        AND p.points_earned IS NOT NULL
+      GROUP BY u.id, u.display_name
+      ORDER BY SUM(p.points_earned) DESC
+    `, [year, month]);
+
+    res.json({
+      leaderboard: result.rows.map(row => ({
+        userId: row.userId,
+        displayName: row.displayName,
+        totalScore: parseFloat(row.totalScore),
+        eventsPlayed: parseInt(row.eventsPlayed),
+      })),
+      month: { year, month },
+    });
+  } catch (error) {
+    console.error('Get monthly leaderboard error:', error);
+    res.status(500).json({ message: 'Server error fetching monthly leaderboard' });
+  }
+});
+
 // @route   GET /api/users/:userId
 // @desc    Get any user's public profile with career stats
 // @access  Public

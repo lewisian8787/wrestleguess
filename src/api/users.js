@@ -10,6 +10,11 @@ export async function getGlobalLeaderboard() {
   return { leaderboard: data.leaderboard, season: data.season };
 }
 
+export async function getMonthlyLeaderboard(year, month) {
+  const data = await api.get(`/api/users/leaderboard/monthly?year=${year}&month=${month}`);
+  return { leaderboard: data.leaderboard, month: data.month };
+}
+
 export async function getUserStats() {
   const data = await api.get('/api/users/stats');
   return data.stats;

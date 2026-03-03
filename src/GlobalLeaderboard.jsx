@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getGlobalLeaderboard } from "./api/users.js";
+import { getGlobalLeaderboard, getMonthlyLeaderboard } from "./api/users.js";
 import { useAuth } from "./auth.jsx";
 import NavBar from "./NavBar";
 import PublicNav from "./PublicNav";
@@ -36,9 +36,24 @@ export default function GlobalLeaderboard() {
   const [sortDir, setSortDir]         = useState("desc");
   const [page, setPage]               = useState(1);
 
+  const today = new Date();
+  const [activeTab, setActiveTab]         = useState("alltime");
+  const [monthYear, setMonthYear]         = useState(today.getFullYear());
+  const [monthMonth, setMonthMonth]       = useState(today.getMonth() + 1);
+  const [monthlyData, setMonthlyData]     = useState([]);
+  const [monthlyLoading, setMonthlyLoading] = useState(false);
+  const [monthlyPage, setMonthlyPage]     = useState(1);
+
   useEffect(() => {
     loadLeaderboard();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "monthly") {
+      loadMonthly(monthYear, monthMonth);
+      setMonthlyPage(1);
+    }
+  }, [activeTab, monthYear, monthMonth]);
 
   async function loadLeaderboard() {
     setLoading(true);
@@ -50,6 +65,35 @@ export default function GlobalLeaderboard() {
       console.error("Error loading leaderboard:", err);
     }
     setLoading(false);
+  }
+
+  async function loadMonthly(year, month) {
+    setMonthlyLoading(true);
+    try {
+      const { leaderboard: data } = await getMonthlyLeaderboard(year, month);
+      setMonthlyData(data || []);
+    } catch (err) {
+      console.error("Error loading monthly leaderboard:", err);
+      setMonthlyData([]);
+    }
+    setMonthlyLoading(false);
+  }
+
+  function prevMonth() {
+    if (monthMonth === 1) { setMonthYear(y => y - 1); setMonthMonth(12); }
+    else setMonthMonth(m => m - 1);
+  }
+
+  function nextMonth() {
+    const now = new Date();
+    if (monthYear > now.getFullYear() || (monthYear === now.getFullYear() && monthMonth >= now.getMonth() + 1)) return;
+    if (monthMonth === 12) { setMonthYear(y => y + 1); setMonthMonth(1); }
+    else setMonthMonth(m => m + 1);
+  }
+
+  function isCurrentMonth() {
+    const now = new Date();
+    return monthYear === now.getFullYear() && monthMonth === now.getMonth() + 1;
   }
 
   function handleSortClick(key) {
@@ -91,8 +135,126 @@ export default function GlobalLeaderboard() {
           <button onClick={() => navigate(-1)} style={backButtonStyle}>← Back</button>
           <h1 style={titleStyle}>Global Leaderboard</h1>
 
-          {/* Season Roadmap */}
-          {season && (
+          {/* Tab Toggle */}
+          <div style={tabsRowStyle}>
+            <button
+              style={{ ...tabButtonStyle, ...(activeTab === "alltime" ? tabButtonActiveStyle : {}) }}
+              onClick={() => setActiveTab("alltime")}
+            >
+              All Time
+            </button>
+            <button
+              style={{ ...tabButtonStyle, ...(activeTab === "monthly" ? tabButtonActiveStyle : {}) }}
+              onClick={() => setActiveTab("monthly")}
+            >
+              Monthly
+            </button>
+          </div>
+
+          {/* Monthly Standings */}
+          {activeTab === "monthly" && (
+            <div>
+              <div style={monthNavStyle}>
+                <button onClick={prevMonth} style={monthNavBtnStyle}>‹</button>
+                <span style={monthLabelStyle}>{MONTH_NAMES[monthMonth - 1]} {monthYear}</span>
+                <button onClick={nextMonth} disabled={isCurrentMonth()} style={{ ...monthNavBtnStyle, opacity: isCurrentMonth() ? 0.3 : 1 }}>›</button>
+              </div>
+
+              {monthlyLoading ? (
+                <div style={loadingStyle}>Loading...</div>
+              ) : monthlyData.length === 0 ? (
+                <div style={emptyStateStyle}>
+                  <p>No results for {MONTH_NAMES[monthMonth - 1]} {monthYear}.</p>
+                  <p style={{ marginTop: "1rem", opacity: 0.7 }}>No events were scored this month.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Winner / Leader banner */}
+                  <div style={winnerBannerStyle}>
+                    <div style={winnerTrophyStyle}>🏆</div>
+                    <div style={winnerBodyStyle}>
+                      <div style={winnerLabelStyle}>
+                        {isCurrentMonth() ? "Current Leader" : `${MONTH_NAMES[monthMonth - 1]} ${monthYear} Champion`}
+                      </div>
+                      <Link to={`/user/${monthlyData[0].userId}`} style={winnerNameStyle}>
+                        {monthlyData[0].displayName}
+                      </Link>
+                      <div style={winnerPtsStyle}>
+                        {Math.round(monthlyData[0].totalScore)} pts · {monthlyData[0].eventsPlayed} event{monthlyData[0].eventsPlayed !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                  </div>
+
+                <div style={tableContainerStyle}>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr style={tableHeaderRowStyle}>
+                        <th style={stickyHeaderCellStyle}>Player</th>
+                        <th style={scrollHeaderCellStyle}>Events</th>
+                        <th style={{ ...scrollHeaderCellStyle, paddingRight: "1.5rem" }}>Points</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyData.slice((monthlyPage - 1) * PAGE_SIZE, monthlyPage * PAGE_SIZE).map((player, index) => {
+                        const rank = (monthlyPage - 1) * PAGE_SIZE + index;
+                        return (
+                          <tr key={player.userId} style={tableRowStyle}>
+                            <td style={stickyPlayerCellStyle}>
+                              <div style={stickyInnerStyle}>
+                                <span style={
+                                  rank === 0 ? goldRankStyle :
+                                  rank === 1 ? silverRankStyle :
+                                  rank === 2 ? bronzeRankStyle :
+                                  rankNumStyle
+                                }>
+                                  #{rank + 1}
+                                </span>
+                                <Link
+                                  to={`/user/${player.userId}`}
+                                  style={playerLinkStyle}
+                                  onMouseEnter={e => e.currentTarget.style.color = colors.primary}
+                                  onMouseLeave={e => e.currentTarget.style.color = "#fff"}
+                                >
+                                  {player.displayName}
+                                </Link>
+                              </div>
+                            </td>
+                            <td style={scrollStatCellStyle}>{player.eventsPlayed}</td>
+                            <td style={{ ...scrollStatCellStyle, ...pointsCellStyle, paddingRight: "1.5rem" }}>
+                              {Math.round(player.totalScore)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+
+                  {/* Pagination */}
+                  {monthlyData.length > PAGE_SIZE && (() => {
+                    const totalMPages = Math.ceil(monthlyData.length / PAGE_SIZE);
+                    return (
+                      <div style={paginationBarStyle}>
+                        <span style={paginationInfoStyle}>
+                          {`${(monthlyPage - 1) * PAGE_SIZE + 1}–${Math.min(monthlyPage * PAGE_SIZE, monthlyData.length)} of ${monthlyData.length}`}
+                        </span>
+                        <div style={paginationButtonsStyle}>
+                          <button style={pgBtnStyle(monthlyPage === 1)} disabled={monthlyPage === 1} onClick={() => setMonthlyPage(1)}>«</button>
+                          <button style={pgBtnStyle(monthlyPage === 1)} disabled={monthlyPage === 1} onClick={() => setMonthlyPage(p => p - 1)}>Prev</button>
+                          <span style={pageIndicatorStyle}>Page {monthlyPage} of {totalMPages}</span>
+                          <button style={pgBtnStyle(monthlyPage === totalMPages)} disabled={monthlyPage === totalMPages} onClick={() => setMonthlyPage(p => p + 1)}>Next</button>
+                          <button style={pgBtnStyle(monthlyPage === totalMPages)} disabled={monthlyPage === totalMPages} onClick={() => setMonthlyPage(totalMPages)}>»</button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Season Roadmap — only on All Time tab */}
+          {activeTab === "alltime" && season && (
             <div style={roadmapCardStyle}>
 
               {/* Top row: season metadata */}
@@ -146,7 +308,7 @@ export default function GlobalLeaderboard() {
             </div>
           )}
 
-          {loading ? (
+          {activeTab === "alltime" && (loading ? (
             <div style={loadingStyle}>Loading leaderboard...</div>
           ) : leaderboard.length === 0 ? (
             <div style={emptyStateStyle}>
@@ -256,7 +418,7 @@ export default function GlobalLeaderboard() {
                 </div>
               )}
             </>
-          )}
+          ))}
         </div>
       </main>
     </div>
@@ -670,4 +832,122 @@ const arrowActiveStyle = {
   marginLeft: "0.3rem",
   opacity: 0.8,
   fontSize: "0.75rem",
+};
+
+/* ── Tabs ── */
+
+const tabsRowStyle = {
+  display: "flex",
+  justifyContent: "center",
+  gap: "0.5rem",
+  marginBottom: "2rem",
+};
+
+const tabButtonStyle = {
+  appearance: "none",
+  border: `2px solid ${colors.borderColor}`,
+  borderRadius: "8px",
+  padding: "0.6rem 2.5rem",
+  background: "transparent",
+  color: colors.textColor,
+  fontSize: "0.95rem",
+  fontWeight: 600,
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  opacity: 0.55,
+  fontFamily: '"Roboto", sans-serif',
+};
+
+const tabButtonActiveStyle = {
+  borderColor: colors.primary,
+  color: colors.primary,
+  opacity: 1,
+  background: `${colors.primary}10`,
+};
+
+/* ── Month navigation ── */
+
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+const monthNavStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "1.5rem",
+  marginBottom: "1.5rem",
+};
+
+const monthNavBtnStyle = {
+  appearance: "none",
+  border: `1px solid ${colors.borderColor}`,
+  borderRadius: "6px",
+  background: colors.background,
+  color: colors.textColor,
+  fontSize: "1.4rem",
+  lineHeight: 1,
+  padding: "0.3rem 0.8rem",
+  cursor: "pointer",
+  fontFamily: '"Roboto", sans-serif',
+  transition: "opacity 0.2s ease",
+};
+
+const monthLabelStyle = {
+  fontSize: "1.4rem",
+  fontWeight: 700,
+  color: colors.textColor,
+  minWidth: "220px",
+  textAlign: "center",
+  fontFamily: '"Bebas Neue", "Impact", sans-serif',
+  letterSpacing: "0.05em",
+};
+
+/* ── Winner banner ── */
+
+const winnerBannerStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "1.25rem",
+  background: "linear-gradient(135deg, #1a1f3a 0%, #0B132B 100%)",
+  border: "2px solid #FFD700",
+  borderRadius: "12px",
+  padding: "1.25rem 1.75rem",
+  marginBottom: "1rem",
+  boxShadow: "0 4px 20px rgba(255,215,0,0.15)",
+};
+
+const winnerTrophyStyle = {
+  fontSize: "2.8rem",
+  lineHeight: 1,
+  flexShrink: 0,
+};
+
+const winnerBodyStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "0.2rem",
+};
+
+const winnerLabelStyle = {
+  fontSize: "0.72rem",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.12em",
+  color: "#FFD700",
+  opacity: 0.8,
+};
+
+const winnerNameStyle = {
+  fontFamily: '"Bebas Neue", "Impact", sans-serif',
+  fontSize: "1.9rem",
+  letterSpacing: "0.04em",
+  color: "#fff",
+  textDecoration: "none",
+  lineHeight: 1.1,
+  transition: "color 0.15s ease",
+};
+
+const winnerPtsStyle = {
+  fontSize: "0.88rem",
+  color: "rgba(255,255,255,0.55)",
+  fontWeight: 500,
 };
