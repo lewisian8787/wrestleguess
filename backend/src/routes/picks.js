@@ -89,11 +89,7 @@ router.get('/event/:eventId', protect, async (req, res) => {
       req.user.id
     );
 
-    if (!pick) {
-      return res.status(404).json({ message: 'No picks found for this event' });
-    }
-
-    res.json({ pick });
+    res.json({ pick: pick || null });
   } catch (error) {
     console.error('Get picks error:', error);
     res.status(500).json({ message: 'Server error fetching picks' });
